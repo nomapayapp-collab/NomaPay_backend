@@ -9,8 +9,8 @@ CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     surname VARCHAR(100) NOT NULL,
-    document_type VARCHAR(20) NOT NULL,
-    document_number VARCHAR(30) NOT NULL,
+    document_type VARCHAR(20),
+    document_number VARCHAR(30),
     email VARCHAR(255) NOT NULL,
     country VARCHAR(2) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
@@ -69,6 +69,15 @@ CREATE TRIGGER trg_set_default_cbu
   FOR EACH ROW
   EXECUTE FUNCTION set_default_cbu();
 
+CREATE TABLE currencies (
+    code VARCHAR(10) PRIMARY KEY, -- ej: 'USD', 'ARS', 'BRL', 'EUR'
+    name VARCHAR(50) NOT NULL,
+    symbol VARCHAR(5),
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT uq_currencies_name UNIQUE (name)
+);
+
 CREATE TABLE wallets (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
@@ -115,15 +124,6 @@ CREATE INDEX idx_transactions_receiver_wallet ON transactions (receiver_wallet_i
 CREATE INDEX idx_transactions_status ON transactions (status);
 
 CREATE INDEX idx_transactions_date ON transactions (transaction_date);
-
-CREATE TABLE currencies (
-    code VARCHAR(10) PRIMARY KEY, -- ej: 'USD', 'ARS', 'BRL', 'EUR'
-    name VARCHAR(50) NOT NULL,
-    symbol VARCHAR(5),
-    is_active BOOLEAN NOT NULL DEFAULT true,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT uq_currencies_name UNIQUE (name)
-);
 
 CREATE TABLE subscriptions (
     id SERIAL PRIMARY KEY,
