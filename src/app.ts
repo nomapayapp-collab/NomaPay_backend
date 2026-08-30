@@ -1,8 +1,9 @@
 
-import express, { Application, Request, Response, NextFunction } from "express";
+import express from "express";
+import type { Application, Request, Response, NextFunction } from "express";
 import cors from "cors";
 import morgan from "morgan";
-import routes from "./routes";
+import mainRouter from "./routes/index.js";
 
 const app: Application = express();
 
@@ -17,7 +18,7 @@ app.get("/", (req: Request, res: Response) => {
     res.json({ message: "NomaPay backend funcionando 🚀" });
 });
 
-app.use("/api", routes);
+app.use("/api", mainRouter);
 
 
 app.use((req: Request, res: Response) => {
