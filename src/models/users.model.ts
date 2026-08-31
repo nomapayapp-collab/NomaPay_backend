@@ -10,13 +10,14 @@ interface UserAttributes {
   documentType?: string | null;
   documentNumber?: string | null;
   email: string;
-  country: string;
-  passwordHash: string;
+  country?: string | null;
+  passwordHash?: string | null;
   username?: string | null;
   usernameUpdatedAt?: Date | null;
   alias?: string | null;
   cbu?: string | null;
   profilePictureUrl?: string | null;
+  googleId?: string | null;
   createdAt?: Date;
   passwordChangedAt?: Date | null;
   resetPasswordToken?: string | null;
@@ -29,10 +30,10 @@ interface UserAttributes {
 
 
 interface UserCreationAttributes extends Optional<UserAttributes, 
-  'id' | 'documentType' | 'documentNumber' | 'username' | 'usernameUpdatedAt' | 
+   'id' | 'documentType' | 'documentNumber' | 'username' | 'usernameUpdatedAt' | 
   'alias' | 'cbu' | 'profilePictureUrl' | 'createdAt' | 'passwordChangedAt' | 
   'resetPasswordToken' | 'resetPasswordTokenExpiresAt' | 'isAdmin' | 
-  'emailVerifiedAt' | 'kycStatus' | 'kycReviewedAt'
+  'emailVerifiedAt' | 'kycStatus' | 'kycReviewedAt' | 'googleId' | 'passwordHash' | 'country'
 > {}
 
 export class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
@@ -42,13 +43,14 @@ export class User extends Model<UserAttributes, UserCreationAttributes> implemen
   declare documentType: string | null;
   declare documentNumber: string | null;
   declare email: string;
-  declare country: string;
-  declare passwordHash: string;
+  declare country: string | null;
+  declare passwordHash: string | null;
   declare username: string | null;
   declare usernameUpdatedAt: Date | null;
   declare alias: string | null;
   declare cbu: string | null;
   declare profilePictureUrl: string | null;
+  declare googleId: string | null;
   declare createdAt: Date;
   declare passwordChangedAt: Date | null;
   declare resetPasswordToken: string | null;
@@ -91,11 +93,11 @@ User.init(
     },
     country: {
       type: DataTypes.STRING(2),
-      allowNull: false,
+      allowNull: true,
     },
     passwordHash: {
       type: DataTypes.STRING(255),
-      allowNull: false,
+      allowNull: true,
       field: 'password_hash',
     },
     username: {
@@ -123,6 +125,12 @@ User.init(
       type: DataTypes.STRING(500),
       allowNull: true,
       field: 'profile_picture_url',
+    },
+    googleId: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      unique: true,
+      field: 'google_id',
     },
     createdAt: {
       type: DataTypes.DATE,
