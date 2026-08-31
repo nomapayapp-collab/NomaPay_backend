@@ -28,6 +28,7 @@ export async function registerUser(input: RegisterInput): Promise<RegisterUserRe
   const { name, surname, country, email, password } = input;
 
   const t = await sequelize.transaction();
+
   try {
     const passwordHash = await bcrypt.hash(password, 10);
 
@@ -55,10 +56,7 @@ export async function registerUser(input: RegisterInput): Promise<RegisterUserRe
     await user.reload({ transaction: t });
 
     const wallet = await Wallet.create(
-      {
-        userId: user.id,
-        preferredCurrency: 'USD',
-      },
+      { userId: user.id, preferredCurrency: 'USD' },
       { transaction: t }
     );
 
@@ -86,12 +84,10 @@ export async function registerUser(input: RegisterInput): Promise<RegisterUserRe
     };
   } catch (err: any) {
     await t.rollback();
-
     if (err.name === 'SequelizeUniqueConstraintError') {
       const field = err.errors?.[0]?.path;
       throw new ConflictError(`Ya existe una cuenta con ese ${field === 'email' ? 'email' : 'dato'}.`);
     }
-
     throw err;
   }
 }
