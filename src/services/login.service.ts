@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
 import { User } from '../models/users.model.js';
 import { ValidationError } from '../errors/app-error.js';
-import { signJwt } from '../utils/jwt.util.js';
+import { issueTokenPair } from './token.service.js';
 import type { RegisterUserResult } from './auth.service.js';
 
 interface LoginInput {
@@ -10,7 +10,8 @@ interface LoginInput {
 }
 
 export interface AuthResult {
-  token: string;
+  accessToken: string;
+  refreshToken: string;
   user: RegisterUserResult;
 }
 
@@ -19,8 +20,6 @@ export async function loginUser(input: LoginInput): Promise<AuthResult> {
 
   const user = await User.findOne({ where: { email: email.toLowerCase().trim() } });
 
-  // Mismo mensaje genérico tanto si el email no existe como si la contraseña
-  // es incorrecta, para no filtrar qué emails están registrados.
   if (!user || !user.passwordHash) {
     throw new ValidationError('Email o contraseña incorrectos.');
   }
@@ -30,10 +29,11 @@ export async function loginUser(input: LoginInput): Promise<AuthResult> {
     throw new ValidationError('Email o contraseña incorrectos.');
   }
 
-  const token = signJwt({ userId: user.id, email: user.email });
+  const { accessToken, refreshToken } = await issueTokenPair(user.id, user.email);
 
   return {
-    token,
+    accessToken,
+    refreshToken,
     user: {
       id: user.id,
       name: user.name,

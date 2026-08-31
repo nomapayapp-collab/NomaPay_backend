@@ -1,3 +1,4 @@
+
 import type { Request, Response } from 'express';
 import { registerUser } from '../services/auth.service.js';
 import { AppError } from '../errors/app-error.js';
