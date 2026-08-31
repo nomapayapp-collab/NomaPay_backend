@@ -10,7 +10,13 @@ import { issueTokenPair } from './token.service.js';
 import type { AuthResult } from './login.service.js';
 import type { RegisterUserResult } from './auth.service.js';
 
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const googleClientId = process.env.GOOGLE_CLIENT_ID;
+
+if (typeof googleClientId !== 'string' || googleClientId.length === 0) {
+  throw new Error('Falta la variable de entorno GOOGLE_CLIENT_ID.');
+}
+
+const googleClient = new OAuth2Client(googleClientId);
 
 interface GooglePayload {
   googleId: string;
@@ -23,7 +29,7 @@ interface GooglePayload {
 async function verifyGoogleIdToken(idToken: string): Promise<GooglePayload> {
   const ticket = await googleClient.verifyIdToken({
     idToken,
-    audience: process.env.GOOGLE_CLIENT_ID,
+    audience: googleClientId,
   });
 
   const payload = ticket.getPayload();
@@ -75,7 +81,7 @@ export async function registerWithGoogle(idToken: string): Promise<AuthResult> {
         profilePictureUrl,
         username,
         alias: username,
-        emailVerifiedAt: new Date(), // Google ya verificó el email por nosotros
+        emailVerifiedAt: new Date(),
       },
       { transaction: t }
     );
@@ -110,9 +116,6 @@ export async function registerWithGoogle(idToken: string): Promise<AuthResult> {
 
 /**
  * Login con Google: entra a una cuenta EXISTENTE.
- * Falla si no existe ningún usuario con ese google_id ni ese email.
- * Si existe un usuario registrado de forma normal (con password) con
- * este mismo email, vincula la cuenta de Google en vez de fallar.
  */
 export async function loginWithGoogle(idToken: string): Promise<AuthResult> {
   const { googleId, email, profilePictureUrl } = await verifyGoogleIdToken(idToken);
@@ -126,7 +129,6 @@ export async function loginWithGoogle(idToken: string): Promise<AuthResult> {
       throw new NotFoundError('No existe una cuenta con este email. Registrate primero.');
     }
 
-    // Cuenta creada con email/password que todavía no estaba vinculada a Google.
     await user.update({ googleId, profilePictureUrl: user.profilePictureUrl ?? profilePictureUrl });
   }
 

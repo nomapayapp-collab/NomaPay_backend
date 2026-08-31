@@ -23,7 +23,8 @@ const IMMUTABLE_FIELDS = ['email', 'cbu', 'documentType', 'documentNumber'] as c
 interface UpdateProfileInput {
   country?: string;
   username?: string;
-  [key: string]: unknown; // para poder detectar campos no permitidos igual
+  alias?: string;
+  [key: string]: unknown;
 }
 
 export async function getUserProfile(userId: number): Promise<UserProfile> {
@@ -75,11 +76,17 @@ export async function updateUserProfile(
     updates.usernameUpdatedAt = new Date();
   }
 
+  if (input.alias && input.alias !== user.alias) {
+  updates.alias = input.alias;
+}
+
   try {
     await user.update(updates);
   } catch (err: any) {
     if (err.name === 'SequelizeUniqueConstraintError') {
-      throw new ConflictError('Ese username ya está en uso.');
+      const field = err.errors?.[0]?.path;
+      const label = field === 'alias' ? 'alias' : 'username';
+      throw new ConflictError(`Ese ${label} ya está en uso.`);
     }
     throw err;
   }
