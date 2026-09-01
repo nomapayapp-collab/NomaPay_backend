@@ -1,22 +1,30 @@
-// services/google.service.ts
+
 import { OAuth2Client } from 'google-auth-library';
 import sequelize from '../db.js';
 import { User } from '../models/users.model.js';
 import { Wallet } from '../models/wallet.model.js';
 import { Balance } from '../models/balance.model.js';
 import { Currency } from '../models/currency.model.js';
-import { ConflictError, NotFoundError, ValidationError } from '../errors/app-error.js';
+import { AppError, ConflictError, NotFoundError, ValidationError } from '../errors/app-error.js';
 import { issueTokenPair } from './token.service.js';
 import type { AuthResult } from './login.service.js';
 import type { RegisterUserResult } from './auth.service.js';
 
-const googleClientId = process.env.GOOGLE_CLIENT_ID;
+let googleClient: OAuth2Client | null = null;
 
-if (typeof googleClientId !== 'string' || googleClientId.length === 0) {
-  throw new Error('Falta la variable de entorno GOOGLE_CLIENT_ID.');
+function getGoogleClient(): { client: OAuth2Client; clientId: string } {
+  const googleClientId = process.env.GOOGLE_CLIENT_ID;
+
+  if (typeof googleClientId !== 'string' || googleClientId.length === 0) {
+    throw new AppError(503, 'El login con Google no está disponible: falta configurar GOOGLE_CLIENT_ID.');
+  }
+
+  if (!googleClient) {
+    googleClient = new OAuth2Client(googleClientId);
+  }
+
+  return { client: googleClient, clientId: googleClientId };
 }
-
-const googleClient = new OAuth2Client(googleClientId);
 
 interface GooglePayload {
   googleId: string;
@@ -27,9 +35,11 @@ interface GooglePayload {
 }
 
 async function verifyGoogleIdToken(idToken: string): Promise<GooglePayload> {
-  const ticket = await googleClient.verifyIdToken({
+  const { client, clientId } = getGoogleClient();
+
+  const ticket = await client.verifyIdToken({
     idToken,
-    audience: googleClientId,
+    audience: clientId,
   });
 
   const payload = ticket.getPayload();
@@ -46,10 +56,7 @@ async function verifyGoogleIdToken(idToken: string): Promise<GooglePayload> {
   };
 }
 
-/**
- * Registro con Google: crea una cuenta nueva.
- * Falla si ya existe un usuario con ese google_id o ese email.
- */
+
 export async function registerWithGoogle(idToken: string): Promise<AuthResult> {
   const { googleId, email, name, surname, profilePictureUrl } = await verifyGoogleIdToken(idToken);
 
@@ -114,9 +121,6 @@ export async function registerWithGoogle(idToken: string): Promise<AuthResult> {
   }
 }
 
-/**
- * Login con Google: entra a una cuenta EXISTENTE.
- */
 export async function loginWithGoogle(idToken: string): Promise<AuthResult> {
   const { googleId, email, profilePictureUrl } = await verifyGoogleIdToken(idToken);
 
