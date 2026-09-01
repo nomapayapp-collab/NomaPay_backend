@@ -56,7 +56,6 @@ async function verifyGoogleIdToken(idToken: string): Promise<GooglePayload> {
   };
 }
 
-
 export async function registerWithGoogle(idToken: string): Promise<AuthResult> {
   const { googleId, email, name, surname, profilePictureUrl } = await verifyGoogleIdToken(idToken);
 
@@ -71,14 +70,9 @@ export async function registerWithGoogle(idToken: string): Promise<AuthResult> {
   }
 
   const t = await sequelize.transaction();
+  let committed = false;
+
   try {
-    const usernameBase = `${name.trim()}.${surname.trim()}`
-      .toLowerCase()
-      .replace(/[^a-z0-9.]/g, '')
-      .slice(0, 45);
-
-    const username = usernameBase || `user${Date.now()}`;
-
     const newUser = await User.create(
       {
         name: name.trim(),
@@ -86,9 +80,8 @@ export async function registerWithGoogle(idToken: string): Promise<AuthResult> {
         email,
         googleId,
         profilePictureUrl,
-        username,
-        alias: username,
         emailVerifiedAt: new Date(),
+        // username y alias: los generan los triggers de la base (con manejo de colisiones)
       },
       { transaction: t }
     );
@@ -112,14 +105,22 @@ export async function registerWithGoogle(idToken: string): Promise<AuthResult> {
     );
 
     await t.commit();
+    committed = true;
 
     const { accessToken, refreshToken } = await issueTokenPair(newUser.id, newUser.email);
     return { accessToken, refreshToken, user: toResult(newUser) };
-  } catch (err) {
-    await t.rollback();
+  } catch (err: any) {
+    if (!committed) {
+      await t.rollback();
+    }
+    if (err.name === 'SequelizeUniqueConstraintError') {
+      const field = err.errors?.[0]?.path;
+      throw new ConflictError(`Ya existe una cuenta con ese ${field === 'email' ? 'email' : 'dato'}.`);
+    }
     throw err;
   }
 }
+
 
 export async function loginWithGoogle(idToken: string): Promise<AuthResult> {
   const { googleId, email, profilePictureUrl } = await verifyGoogleIdToken(idToken);
