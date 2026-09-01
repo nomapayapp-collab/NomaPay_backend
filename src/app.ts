@@ -1,22 +1,42 @@
-
 import express from "express";
 import type { Application, Request, Response, NextFunction } from "express";
 import cors from "cors";
 import morgan from "morgan";
+import swaggerUi from "swagger-ui-express";
 import mainRouter from "./routes/index.js";
+import { swaggerSpec } from "./swagger.js";
 
 const app: Application = express();
 
 
-app.use(cors());
+const allowedOrigins = (process.env.CORS_ORIGINS ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+app.use(
+    cors({
+        origin(origin, callback) {
+            if (!origin || allowedOrigins.includes(origin)) {
+                callback(null, true);
+            } else {
+                callback(new Error("Origen no permitido por CORS"));
+            }
+        },
+        credentials: true,
+    })
+);
+
+
 app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-
 app.get("/", (req: Request, res: Response) => {
     res.json({ message: "NomaPay backend funcionando 🚀" });
 });
+
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use("/api", mainRouter);
 
