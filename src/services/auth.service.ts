@@ -32,14 +32,6 @@ export async function registerUser(input: RegisterInput): Promise<RegisterUserRe
   try {
     const passwordHash = await bcrypt.hash(password, 10);
 
-    const usernameBase = `${name.trim()}.${surname.trim()}`
-      .toLowerCase()
-      .replace(/[^a-z0-9.]/g, '')
-      .slice(0, 45);
-
-    const username = usernameBase || `user${Date.now()}`;
-    const alias = username;
-
     const user = await User.create(
       {
         name: name.trim(),
@@ -47,8 +39,7 @@ export async function registerUser(input: RegisterInput): Promise<RegisterUserRe
         country: country.toUpperCase(),
         email: email.toLowerCase().trim(),
         passwordHash,
-        username,
-        alias,
+        
       },
       { transaction: t }
     );
