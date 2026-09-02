@@ -1,6 +1,5 @@
 CREATE EXTENSION IF NOT EXISTS unaccent;
 
-
 CREATE TYPE kyc_status_type AS ENUM (
   'not_started',
   'pending',
@@ -17,9 +16,9 @@ CREATE TABLE users (
     email VARCHAR(255) NOT NULL,
     country VARCHAR(2) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    username VARCHAR(50) ,
+    username VARCHAR(50),
     username_updated_at TIMESTAMPTZ,
-    alias VARCHAR(50) ,
+    alias VARCHAR(50),
     cbu VARCHAR(22),
     profile_picture_url VARCHAR(500),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -75,7 +74,6 @@ CREATE TRIGGER trg_set_default_cbu
   FOR EACH ROW
   EXECUTE FUNCTION set_default_cbu();
 
-
 CREATE OR REPLACE FUNCTION generate_username(p_name VARCHAR, p_surname VARCHAR)
 RETURNS VARCHAR(50) AS $$
 DECLARE
@@ -114,7 +112,6 @@ CREATE TRIGGER trg_set_default_username
   BEFORE INSERT ON users
   FOR EACH ROW
   EXECUTE FUNCTION set_default_username();
-
 
 CREATE OR REPLACE FUNCTION generate_alias(p_name VARCHAR, p_surname VARCHAR)
 RETURNS VARCHAR(50) AS $$
@@ -155,7 +152,6 @@ CREATE TRIGGER trg_set_default_alias
   FOR EACH ROW
   EXECUTE FUNCTION set_default_alias();
 
-
 CREATE TABLE currencies (
     code VARCHAR(10) PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
@@ -165,10 +161,15 @@ CREATE TABLE currencies (
     CONSTRAINT uq_currencies_name UNIQUE (name)
 );
 
-INSERT INTO currencies (code, name, symbol) VALUES
-  ('USD', 'Dólar estadounidense', '$'),
-  ('ARS', 'Peso argentino', '$'),
-  ('BRL', 'Real brasileño', 'R$')
+INSERT INTO
+    currencies (code, name, symbol)
+VALUES (
+        'USD',
+        'Dólar estadounidense',
+        '$'
+    ),
+    ('ARS', 'Peso argentino', '$'),
+    ('BRL', 'Real brasileño', 'R$')
 ON CONFLICT (code) DO NOTHING;
 
 CREATE TABLE wallets (

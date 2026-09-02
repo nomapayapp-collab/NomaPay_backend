@@ -6,9 +6,11 @@
 --   - country: deja de ser obligatorio (Google no lo provee de forma confiable)
 
 ALTER TABLE users
-  ADD COLUMN google_id VARCHAR(255),
-  ALTER COLUMN password_hash DROP NOT NULL,
-  ALTER COLUMN country DROP NOT NULL;
+ADD COLUMN google_id VARCHAR(255),
+ALTER COLUMN password_hash
+DROP NOT NULL,
+ALTER COLUMN country
+DROP NOT NULL;
 
 ALTER TABLE users
-  ADD CONSTRAINT uq_users_google_id UNIQUE (google_id);
+ADD CONSTRAINT uq_users_google_id UNIQUE (google_id);

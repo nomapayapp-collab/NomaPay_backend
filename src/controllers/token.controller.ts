@@ -1,16 +1,29 @@
-
 import type { Request, Response } from 'express';
 import { refreshAccessToken, revokeRefreshToken } from '../services/token.service.js';
 import { AppError } from '../errors/app-error.js';
 
+const isProduction = process.env.NODE_ENV === 'production';
+const cookieOptions = {
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: 'none' as const,
+};
+
 export async function refresh(req: Request, res: Response) {
   try {
-    const { refreshToken } = req.body;
+    // Ahora leemos el refresh token desde la cookie
+    const refreshToken = req.cookies.refreshToken;
+
     if (!refreshToken) {
-      return res.status(400).json({ error: 'Falta el refreshToken.' });
+      return res.status(401).json({ error: 'Falta el refreshToken en las cookies.' });
     }
-    const tokens = await refreshAccessToken(refreshToken);
-    return res.status(200).json(tokens);
+    const result = await refreshAccessToken(refreshToken);
+
+    // Setear nuevamente las cookies con los tokens renovados
+    res.cookie('accessToken', result.accessToken, cookieOptions);
+    res.cookie('refreshToken', result.refreshToken, cookieOptions);
+
+    return res.status(200).json({ message: 'Tokens renovados' });
   } catch (err) {
     if (err instanceof AppError) {
       return res.status(err.statusCode).json({ error: err.message });
@@ -22,11 +35,17 @@ export async function refresh(req: Request, res: Response) {
 
 export async function logout(req: Request, res: Response) {
   try {
-    const { refreshToken } = req.body;
-    if (!refreshToken) {
-      return res.status(400).json({ error: 'Falta el refreshToken.' });
+    // Leemos el refresh token desde la cookie
+    const refreshToken = req.cookies.refreshToken;
+
+    if (refreshToken) {
+      await revokeRefreshToken(refreshToken);
     }
-    await revokeRefreshToken(refreshToken);
+
+    // Borramos ambas cookies del navegador
+    res.clearCookie('accessToken', cookieOptions);
+    res.clearCookie('refreshToken', cookieOptions);
+
     return res.status(200).json({ message: 'Sesión cerrada correctamente.' });
   } catch (err) {
     console.error(err);
