@@ -28,11 +28,11 @@ export const swaggerSpec = {
     ],
     components: {
         securitySchemes: {
-            bearerAuth: {
-                type: "http",
-                scheme: "bearer",
-                bearerFormat: "JWT",
-                description: "Access token devuelto por /auth/login o /auth/register. Se manda como 'Authorization: Bearer <token>'.",
+            cookieAuth: {
+                type: "apiKey",
+                in: "cookie",
+                name: "accessToken",
+                description: "El access token se lee automáticamente de las cookies (no hace falta enviarlo manualmente desde el frontend).",
             },
         },
         schemas: {
@@ -96,21 +96,7 @@ export const swaggerSpec = {
                     alias: { type: "string", example: "nuevo.alias" },
                 },
             },
-            AuthTokens: {
-                type: "object",
-                properties: {
-                    accessToken: { type: "string", description: "JWT de corta duración para autenticar requests." },
-                    refreshToken: { type: "string", description: "Token de larga duración para pedir un accessToken nuevo." },
-                },
-            },
-            AuthResult: {
-                type: "object",
-                properties: {
-                    accessToken: { type: "string" },
-                    refreshToken: { type: "string" },
-                    user: { $ref: "#/components/schemas/UserSummary" },
-                },
-            },
+
             BalanceDetail: {
                 type: "object",
                 properties: {
@@ -164,7 +150,7 @@ export const swaggerSpec = {
                 responses: {
                     "200": {
                         description: "Login exitoso",
-                        content: { "application/json": { schema: { $ref: "#/components/schemas/AuthResult" } } },
+                        content: { "application/json": { schema: { $ref: "#/components/schemas/UserSummary" } } },
                     },
                     "400": errorResponse("Email o contraseña incorrectos"),
                 },
@@ -175,18 +161,6 @@ export const swaggerSpec = {
                 tags: ["Auth"],
                 summary: "Renovar el access token",
                 description: "Usa el refreshToken vigente para obtener un par de tokens nuevo (rotación de refresh token).",
-                requestBody: {
-                    required: true,
-                    content: {
-                        "application/json": {
-                            schema: {
-                                type: "object",
-                                required: ["refreshToken"],
-                                properties: { refreshToken: { type: "string" } },
-                            },
-                        },
-                    },
-                },
                 responses: {
                     "200": {
                         description: "Tokens renovados",
@@ -201,18 +175,6 @@ export const swaggerSpec = {
                 tags: ["Auth"],
                 summary: "Cerrar sesión",
                 description: "Revoca el refreshToken enviado para que no se pueda volver a usar.",
-                requestBody: {
-                    required: true,
-                    content: {
-                        "application/json": {
-                            schema: {
-                                type: "object",
-                                required: ["refreshToken"],
-                                properties: { refreshToken: { type: "string" } },
-                            },
-                        },
-                    },
-                },
                 responses: {
                     "200": { description: "Sesión cerrada correctamente" },
                     "400": errorResponse("Falta el refreshToken"),
@@ -238,7 +200,7 @@ export const swaggerSpec = {
                 responses: {
                     "201": {
                         description: "Usuario creado con Google",
-                        content: { "application/json": { schema: { $ref: "#/components/schemas/AuthResult" } } },
+                        content: { "application/json": { schema: { $ref: "#/components/schemas/UserSummary" } } },
                     },
                     "400": errorResponse("Falta el idToken de Google"),
                 },
@@ -263,7 +225,7 @@ export const swaggerSpec = {
                 responses: {
                     "200": {
                         description: "Login con Google exitoso",
-                        content: { "application/json": { schema: { $ref: "#/components/schemas/AuthResult" } } },
+                        content: { "application/json": { schema: { $ref: "#/components/schemas/UserSummary" } } },
                     },
                     "400": errorResponse("Falta el idToken de Google"),
                 },
@@ -273,7 +235,7 @@ export const swaggerSpec = {
             get: {
                 tags: ["Users"],
                 summary: "Obtener el perfil del usuario autenticado",
-                security: [{ bearerAuth: [] }],
+                security: [{ cookieAuth: [] }],
                 responses: {
                     "200": {
                         description: "Perfil del usuario",
@@ -286,7 +248,7 @@ export const swaggerSpec = {
             patch: {
                 tags: ["Users"],
                 summary: "Actualizar el perfil del usuario autenticado",
-                security: [{ bearerAuth: [] }],
+                security: [{ cookieAuth: [] }],
                 requestBody: {
                     required: true,
                     content: { "application/json": { schema: { $ref: "#/components/schemas/UpdateProfileInput" } } },
@@ -306,7 +268,7 @@ export const swaggerSpec = {
             patch: {
                 tags: ["Users"],
                 summary: "Cambiar la contraseña",
-                security: [{ bearerAuth: [] }],
+                security: [{ cookieAuth: [] }],
                 requestBody: {
                     required: true,
                     content: {
@@ -333,7 +295,7 @@ export const swaggerSpec = {
             get: {
                 tags: ["Wallets"],
                 summary: "Obtener la wallet y balances del usuario autenticado",
-                security: [{ bearerAuth: [] }],
+                security: [{ cookieAuth: [] }],
                 responses: {
                     "200": {
                         description: "Wallet del usuario",
@@ -348,7 +310,7 @@ export const swaggerSpec = {
             patch: {
                 tags: ["Wallets"],
                 summary: "Cambiar la moneda preferida de la wallet",
-                security: [{ bearerAuth: [] }],
+                security: [{ cookieAuth: [] }],
                 requestBody: {
                     required: true,
                     content: {
