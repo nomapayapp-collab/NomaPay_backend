@@ -160,13 +160,13 @@ export const swaggerSpec = {
             post: {
                 tags: ["Auth"],
                 summary: "Renovar el access token",
-                description: "Usa el refreshToken vigente para obtener un par de tokens nuevo (rotación de refresh token).",
+                description: "Usa el refreshToken vigente de la cookie para setear un par de tokens nuevo (rotación).",
                 responses: {
                     "200": {
-                        description: "Tokens renovados",
-                        content: { "application/json": { schema: { $ref: "#/components/schemas/AuthTokens" } } },
+                        description: "Tokens renovados correctamente",
+                        content: { "application/json": { schema: { type: "object", properties: { message: { type: "string" } } } } },
                     },
-                    "400": errorResponse("Falta el refreshToken"),
+                    "400": errorResponse("Falta el refreshToken en las cookies"),
                 },
             },
         },
