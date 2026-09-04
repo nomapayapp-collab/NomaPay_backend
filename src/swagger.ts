@@ -1,5 +1,3 @@
-
-
 const errorResponse = (description: string) => ({
     description,
     content: {
@@ -115,6 +113,50 @@ export const swaggerSpec = {
                         type: "array",
                         items: { $ref: "#/components/schemas/BalanceDetail" },
                     },
+                },
+            },
+            ExchangeInput: {
+                type: "object",
+                required: ["fromCurrency", "toCurrency", "amount"],
+                properties: {
+                    fromCurrency: { type: "string", example: "ARS" },
+                    toCurrency: { type: "string", example: "USD" },
+                    amount: { type: "number", example: 10000, description: "Monto en la moneda de origen (fromCurrency)." },
+                },
+            },
+            TransactionDetail: {
+                type: "object",
+                properties: {
+                    id: { type: "integer", example: 4 },
+                    type: { type: "string", enum: ["buy", "sell", "transfer", "exchange"], example: "exchange" },
+                    status: { type: "string", example: "completed" },
+                    currencyOrigin: { type: "string", example: "ARS" },
+                    currencyDestination: { type: "string", example: "USD" },
+                    amount: { type: "string", example: "10000.00000000", description: "Monto original en la moneda de origen." },
+                    fee: { type: "string", example: "50.00000000", description: "Comisión cobrada en la moneda de origen." },
+                    finalAmount: { type: "string", example: "6.63", description: "Monto acreditado en la moneda de destino." },
+                    exchangeRate: { type: "string", example: "1508.21110000", description: "Cuántas unidades de currencyOrigin equivalen a 1 unidad de currencyDestination." },
+                    transactionDate: { type: "string", format: "date-time", example: "2026-09-04T01:48:13.004Z" },
+                },
+            },
+            ExchangeResult: {
+                type: "object",
+                properties: {
+                    transaction: { $ref: "#/components/schemas/TransactionDetail" },
+                    wallet: { $ref: "#/components/schemas/WalletSummary" },
+                },
+            },
+            ExchangeRatesResult: {
+                type: "object",
+                properties: {
+                    base: { type: "string", example: "ARS" },
+                    rates: {
+                        type: "object",
+                        additionalProperties: { type: "number" },
+                        example: { USD: 0.000663, BRL: 0.003378 },
+                        description: "Cuántas unidades de la moneda base equivalen a 1 unidad de cada moneda listada.",
+                    },
+                    fetchedAt: { type: "string", format: "date-time", example: "2026-09-04T01:45:56.806Z" },
                 },
             },
         },
@@ -331,6 +373,54 @@ export const swaggerSpec = {
                     "400": errorResponse("Falta preferredCurrency, o la moneda no está disponible"),
                     "401": errorResponse("No autenticado"),
                     "404": errorResponse("Este usuario no tiene una wallet asociada"),
+                },
+            },
+        },
+        "/wallets/me/exchange": {
+            post: {
+                tags: ["Wallets"],
+                summary: "Intercambiar monedas",
+                description:
+                    "Convierte un monto de fromCurrency a toCurrency dentro de la misma wallet, usando la tasa de cambio actual (con caché). Se cobra una comisión (TRANSACTION_FEE_PERCENTAGE) sobre el monto de origen. El usuario elige libremente ambas monedas. Al completarse, se envía un email de confirmación vía AWS SES.",
+                security: [{ cookieAuth: [] }],
+                requestBody: {
+                    required: true,
+                    content: { "application/json": { schema: { $ref: "#/components/schemas/ExchangeInput" } } },
+                },
+                responses: {
+                    "201": {
+                        description: "Operación completada: balances actualizados y transacción registrada",
+                        content: { "application/json": { schema: { $ref: "#/components/schemas/ExchangeResult" } } },
+                    },
+                    "400": errorResponse("Datos inválidos: monto <= 0, misma moneda en origen/destino, moneda inactiva, o saldo insuficiente"),
+                    "401": errorResponse("No autenticado"),
+                    "404": errorResponse("Wallet o balance de origen inexistente"),
+                    "502": errorResponse("No se pudo obtener la tasa de cambio desde la API externa"),
+                },
+            },
+        },
+        "/wallets/me/exchange-rates": {
+            get: {
+                tags: ["Wallets"],
+                summary: "Consultar tasas de cambio actuales",
+                description: "Devuelve las tasas de cambio de las monedas activas contra una moneda base, usando caché en memoria con TTL configurable (EXCHANGE_RATE_CACHE_TTL_MS).",
+                security: [{ cookieAuth: [] }],
+                parameters: [
+                    {
+                        name: "base",
+                        in: "query",
+                        required: false,
+                        schema: { type: "string", example: "ARS" },
+                        description: "Moneda base contra la que se expresan las tasas. Por defecto, LOCAL_CURRENCY (ARS).",
+                    },
+                ],
+                responses: {
+                    "200": {
+                        description: "Tasas de cambio actuales",
+                        content: { "application/json": { schema: { $ref: "#/components/schemas/ExchangeRatesResult" } } },
+                    },
+                    "401": errorResponse("No autenticado"),
+                    "502": errorResponse("No se pudo obtener la tasa de cambio desde la API externa"),
                 },
             },
         },
