@@ -1,4 +1,5 @@
-### NomaPay — Backend
+
+ ### NomaPay — Backend
 
 Backend de **NomaPay**, una billetera digital multi-moneda simulada (sin dinero real). Expone la API REST que consume el frontend en React: autenticación, perfil de usuario y wallet.
 
@@ -35,7 +36,7 @@ Backend de **NomaPay**, una billetera digital multi-moneda simulada (sin dinero 
 | Framework HTTP | Express |
 | Base de datos | PostgreSQL |
 | ORM | Sequelize |
-| Autenticación | JWT en Cookies HttpOnly |
+| Autenticación | JWT (access + refresh token) |
 | Hash de contraseñas | bcrypt |
 | Login social | Google OAuth (`google-auth-library`) |
 | Documentación de API | Swagger / OpenAPI 3.0 (`swagger-ui-express`) |
@@ -45,7 +46,7 @@ Backend de **NomaPay**, una billetera digital multi-moneda simulada (sin dinero 
 
 ## Estructura del proyecto
 
-```text
+```
 src/
   controllers/    # recibe el request, valida el input mínimo y llama al service correspondiente
   services/       # lógica de negocio: acá vive el "qué hace" cada operación
@@ -66,10 +67,9 @@ db/
 La separación en capas (`controller → service → model`) busca que cada archivo tenga una sola responsabilidad: el controller no sabe *cómo* se registra un usuario, solo que tiene que llamar a `registerUser()` y devolver lo que le devuelvan; toda la lógica (crear wallet, crear balances iniciales, hashear password) vive en el service, que es donde realmente hay que mirar para entender el negocio.
 
 ---
-
+```
 ## Modelo de datos
 
-```text
 users (1) ──── (1) wallets (1) ──── (N) balances ──── (1) currencies
 │
 └──── (N) transactions
@@ -101,14 +101,14 @@ Tablas principales: users, wallets, balances, transactions, más currencies (cat
 
 ## Autenticación
 
-Estrategia: **JWT almacenados en Cookies `HttpOnly` Seguras.**
+Estrategia: **JWT con par access/refresh token.**
 
-- **Registro / Login** (`/auth/register`, `/auth/login`): El backend configura automáticamente dos cookies invisibles para JavaScript (`accessToken` y `refreshToken`) en el navegador. La respuesta JSON solo devuelve los datos públicos del usuario.
-- **Refresh** (`/auth/refresh`): Lee automáticamente el `refreshToken` desde la cookie del navegador para pedir un par nuevo de tokens (rotación de refresh token).
-- **Logout** (`/auth/logout`): Revoca el `refreshToken` en la base de datos y le indica al navegador que borre las cookies, cerrando la sesión efectivamente.
-- **Protección de rutas**: El middleware `requireAuth` lee automáticamente la cookie `accessToken` en cada request a una ruta protegida (`/users/me`, `/wallets/me`, etc.). Ya no es necesario enviar el header `Authorization: Bearer <token>` desde el frontend.
-- **Seguridad de contraseñas**: Se hashean con `bcrypt` antes de guardarse; nunca se guarda ni se devuelve la contraseña en texto plano.
-- **Login con Google**: Implementado con `google-auth-library`. Genera y setea las mismas cookies seguras que el login tradicional.
+- **Registro / Login** (`/auth/register`, `/auth/login`) devuelven un `accessToken` (corta duración, se manda en cada request) y un `refreshToken` (larga duración, se guarda para renovar la sesión sin volver a pedir contraseña).
+- **Refresh** (`/auth/refresh`): usa el `refreshToken` para pedir un par nuevo. El refresh token usado se invalida (rotación), así que un token robado no sirve dos veces.
+- **Logout** (`/auth/logout`): revoca el `refreshToken` en la base de datos — a partir de ahí ya no se puede usar para pedir un accessToken nuevo.
+- **Protección de rutas**: el middleware `requireAuth` valida el `Authorization: Bearer <accessToken>` en cada request a una ruta protegida (`/users/me`, `/wallets/me`, etc.) y rechaza con `401` si falta o es inválido.
+- **Seguridad de contraseñas**: se hashean con `bcrypt` antes de guardarse; nunca se guarda ni se devuelve la contraseña en texto plano.
+- **Login con Google**: implementado con `google-auth-library`. Si la variable `GOOGLE_CLIENT_ID` no está configurada, ese endpoint puntual devuelve `503` explicando qué falta, pero **no afecta al resto de la API** (login/registro normal siguen funcionando igual).
 
 ---
 
@@ -116,7 +116,7 @@ Estrategia: **JWT almacenados en Cookies `HttpOnly` Seguras.**
 
 ### 1. Clonar e instalar
 
-```bash
+```
 git clone https://github.com/nomapayapp-collab/NomaPay_backend.git
 cd NomaPay_backend
 npm install
@@ -130,20 +130,21 @@ Ver la sección [Variables de entorno](#variables-de-entorno).
 
 **Importante:** hay que correr `schema.sql` **y todas las migraciones**, en orden — no alcanza con el schema solo.
 
-```bash
+```
 createdb nomapay
 psql $DATABASE_URL -f db/schema.sql
 psql $DATABASE_URL -f db/migrations/0001_add_google_auth.sql
 psql $DATABASE_URL -f db/migrations/0002_add_refresh_tokens.sql
 psql $DATABASE_URL -f db/migrations/0003_fix_nullable_columns.sql
 psql $DATABASE_URL -f db/seed.sql   # opcional: carga datos de prueba
+
 ```
 
 *(Si no tenés `psql` en el PATH de Windows, se puede correr el contenido de cada archivo desde una extensión de base de datos de tu editor — la lógica es la misma: correr `schema.sql` primero, después cada migración en orden numérico.)*
 
 ### 4. Levantar el servidor
 
-```bash
+```
 npm run dev
 ```
 
@@ -159,9 +160,9 @@ Con esto arriba, entrá a `http://localhost:3000/api-docs` para ver y probar tod
 | `JWT_SECRET` | Sí | Clave para firmar los access tokens |
 | `JWT_EXPIRES_IN` | Sí | Duración del access token (ej. `7d`) |
 | `PORT` | No (default 3000) | Puerto del servidor |
-| `NODE_ENV` | No | En `production` activa SSL en la conexión a Postgres y flags seguras en las cookies |
+| `NODE_ENV` | No | En `production` activa SSL en la conexión a Postgres |
 | `GOOGLE_CLIENT_ID` | No | Necesaria solo para que funcione el login con Google |
-| `CORS_ORIGINS` | Sí | Lista de dominios permitidos (ej. URL de Vercel) |
+| `CORS_ORIGINS` | Sí | Lista de dominios permitidos |
 
 ---
 
@@ -172,11 +173,11 @@ Documentados en detalle en `/api-docs`. Resumen:
 | Método | Ruta | Auth | Descripción |
 |---|---|---|---|
 | POST | `/api/auth/register` | No | Crea cuenta, wallet y balances iniciales |
-| POST | `/api/auth/login` | No | Login, setea cookies seguras `HttpOnly` con los tokens |
-| POST | `/api/auth/refresh` | No | Renueva los tokens (leyendo automáticamente la cookie) |
-| POST | `/api/auth/logout` | No | Revoca el token en BD y limpia las cookies del navegador |
+| POST | `/api/auth/login` | No | Login, devuelve accessToken + refreshToken |
+| POST | `/api/auth/refresh` | No | Renueva el par de tokens |
+| POST | `/api/auth/logout` | No | Revoca el refreshToken |
 | POST | `/api/auth/google/register` | No | Registro con Google |
-| POST | `/api/auth/google/login` | No | Login con Google, setea cookies seguras |
+| POST | `/api/auth/google/login` | No | Login con Google |
 | GET | `/api/users/me` | Sí | Perfil del usuario autenticado |
 | PATCH | `/api/users/me` | Sí | Actualiza country/username/alias |
 | PATCH | `/api/users/me/password` | Sí | Cambia la contraseña |
@@ -187,7 +188,7 @@ Documentados en detalle en `/api-docs`. Resumen:
 
 ## Despliegue
 
-- **Backend + PostgreSQL**: Railway. El servicio usa `DATABASE_URL` (inyectada automáticamente por el plugin de Postgres de Railway) y `NODE_ENV=production` para activar SSL en la conexión a la base y la flag `Secure` de las cookies.
+- **Backend + PostgreSQL**: Railway. El servicio usa `DATABASE_URL` (inyectada automáticamente por el plugin de Postgres de Railway) y `NODE_ENV=production` para activar SSL en la conexión a la base.
 - **Frontend**: Vercel, apuntando al backend de Railway mediante la variable `VITE_API_URL`.
 
 ---
@@ -203,8 +204,8 @@ Para mantener separados los datos de identidad (nombre, email, documento) de los
 **¿Por qué `transactions` guarda `currency_origin`, `currency_destination`, `exchange_rate` y `fee` desde el diseño inicial, si compra/venta/intercambio todavía no están implementados?**
 Porque diseñar el modelo de datos pensando en el flujo completo evita tener que hacer una migración disruptiva más adelante. Aunque la lógica de negocio (Sprint 2) todavía no escribe en estos campos, la tabla ya está preparada para representar cualquiera de las cuatro operaciones (`buy`, `sell`, `exchange`, `transfer`) sin cambios de esquema.
 
-**¿Por qué JWT almacenado en Cookies en vez de LocalStorage?**
-JWT es *stateless*: el backend no necesita guardar sesiones en memoria para validar cada request, lo cual es más simple de escalar. Migrar el almacenamiento de los tokens desde el `LocalStorage` (donde son vulnerables a scripts maliciosos XSS) a cookies `HttpOnly` asegura que el navegador gestione la sesión de manera segura, aislando los tokens del acceso mediante JavaScript.
+**¿Por qué JWT con access + refresh token, en vez de sessions?**
+JWT es *stateless*: el backend no necesita guardar sesiones en memoria ni en la base para validar cada request, lo cual es más simple de escalar y encaja naturalmente con un frontend separado (React) que consume la API desde otro dominio. El refresh token con rotación agrega una capa de seguridad: si un access token se filtra, expira rápido; si un refresh token se filtra, se puede revocar por `logout`.
 
 ---
 

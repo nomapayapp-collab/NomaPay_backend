@@ -3,7 +3,7 @@ import { DataTypes, Model } from 'sequelize';
 import type { InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
 import sequelize from '../db.js';
 
-export type TransactionType = 'buy' | 'sell' | 'transfer' | 'exchange';
+export type TransactionType = 'deposit' | 'transfer' | 'exchange';
 export type TransactionStatus = 'pending' | 'completed' | 'cancelled' | 'rejected';
 
 export class Transaction extends Model<InferAttributes<Transaction>, InferCreationAttributes<Transaction>> {
@@ -24,7 +24,7 @@ export class Transaction extends Model<InferAttributes<Transaction>, InferCreati
 Transaction.init(
   {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    senderWalletId: { type: DataTypes.INTEGER, field: 'sender_wallet_id', allowNull: false },
+    senderWalletId: { type: DataTypes.INTEGER, field: 'sender_wallet_id', allowNull: true },
     receiverWalletId: { type: DataTypes.INTEGER, field: 'receiver_wallet_id', allowNull: true },
     type: { type: DataTypes.ENUM('buy', 'sell', 'transfer', 'exchange'), allowNull: false },
     status: {
