@@ -60,7 +60,7 @@ export function calculateConversion(
   return { fee, totalDebit, destinationAmount };
 }
 
-async function assertActiveCurrency(code: string): Promise<Currency> {
+export async function assertActiveCurrency(code: string): Promise<Currency> {
   const currency = await Currency.findOne({ where: { code } });
   if (!currency || !currency.isActive) {
     throw new ValidationError(`La moneda "${code}" no está disponible.`);
@@ -88,7 +88,7 @@ export async function convertCurrency(
   await assertActiveCurrency(toCurrency);
 
 
- 
+
   const rate = await getExchangeRate(fromCurrency, toCurrency);
   const { fee, totalDebit, destinationAmount } = calculateConversion(amount, rate);
 
@@ -117,7 +117,7 @@ export async function convertCurrency(
     if (Number(originBalance.amount) < totalDebit) {
       throw new ValidationError(
         `Saldo insuficiente en ${fromCurrency}. Se necesitan ${round2(totalDebit)} (monto + comisión) ` +
-          `y el saldo disponible es ${originBalance.amount}.`
+        `y el saldo disponible es ${originBalance.amount}.`
       );
     }
 
@@ -127,7 +127,7 @@ export async function convertCurrency(
       lock: t.LOCK.UPDATE,
     });
     if (!destinationBalance) {
-    
+
       destinationBalance = await Balance.create(
         { walletId: wallet.id, currencyCode: toCurrency, amount: '0' },
         { transaction: t }
@@ -153,7 +153,7 @@ export async function convertCurrency(
     const createdTransaction = await Transaction.create(
       {
         senderWalletId: wallet.id,
-        receiverWalletId: wallet.id, 
+        receiverWalletId: wallet.id,
         type,
         status: 'completed',
         currencyOrigin: fromCurrency,
@@ -169,7 +169,7 @@ export async function convertCurrency(
     await t.commit();
     committed = true;
 
-  
+
     const user = await User.findByPk(userId);
     if (user) {
       sendTransactionEmail(user, {
@@ -193,11 +193,11 @@ export async function convertCurrency(
         status: createdTransaction.status,
         currencyOrigin: createdTransaction.currencyOrigin,
         currencyDestination: createdTransaction.currencyDestination as string,
-       
+
         amount: round2(createdTransaction.amount),
         fee: round2(createdTransaction.fee),
         finalAmount: round2(createdTransaction.finalAmount as string),
-       
+
         exchangeRate: Number(createdTransaction.exchangeRate).toFixed(4),
         transactionDate: createdTransaction.transactionDate,
       },

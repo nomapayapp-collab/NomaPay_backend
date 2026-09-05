@@ -65,8 +65,7 @@ export async function sendEmail(to: string, subject: string, html: string, text?
 }
 
 const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
-  buy: 'Compra',
-  sell: 'Venta',
+  deposit: 'Deposito',
   exchange: 'Intercambio',
   transfer: 'Transferencia',
 };
