@@ -1,10 +1,8 @@
-// api-calls/apicall.ts
-// Helper genérico para llamar APIs externas (fetch nativo de Node) con timeout
-// y manejo de errores consistente con el resto del proyecto (AppError).
+
 import { AppError } from '../errors/app-error.js';
 
 interface FetchJsonOptions extends RequestInit {
-    /** Tiempo máximo de espera en milisegundos antes de abortar la request. Default: 8000ms */
+   
     timeoutMs?: number;
 }
 

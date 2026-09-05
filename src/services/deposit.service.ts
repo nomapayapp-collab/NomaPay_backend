@@ -1,11 +1,3 @@
-// services/deposit.service.ts
-//
-// Carga de dinero falso a la wallet del usuario, en la moneda que elija.
-// A diferencia de convertCurrency (buy/sell/exchange), acá no hay conversión ni
-// tasa de cambio: es plata que "aparece" en un solo balance. No se cobra comisión.
-//
-// Tope por carga: MAX_DEPOSIT_AMOUNT (por defecto 1.000.000), configurable por
-// .env, para que no se pueda simular un monto absurdo de un solo golpe.
 
 import sequelize from '../db.js';
 import { Wallet } from '../models/wallet.model.js';
@@ -38,12 +30,6 @@ export interface DepositResult {
     wallet: WalletSummary;
 }
 
-/**
- * Carga dinero falso en la moneda elegida. Suma directo al balance existente
- * (o lo crea en 0 primero, si por algún motivo todavía no existía) dentro de
- * una transacción de DB con lock, para evitar condiciones de carrera si el
- * usuario dispara dos cargas casi al mismo tiempo.
- */
 export async function depositFunds(userId: number, input: DepositInput): Promise<DepositResult> {
     const currencyCode = input.currencyCode.toUpperCase();
     const amount = Number(input.amount);
