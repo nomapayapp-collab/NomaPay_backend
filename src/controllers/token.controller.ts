@@ -3,15 +3,16 @@ import { refreshAccessToken, revokeRefreshToken } from '../services/token.servic
 import { AppError } from '../errors/app-error.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
+const sameSite: 'none' | 'lax' = isProduction ? 'none' : 'lax';
 const cookieOptions = {
   httpOnly: true,
   secure: isProduction,
-  sameSite: 'none' as const,
+  sameSite,
 };
 
 export async function refresh(req: Request, res: Response) {
   try {
-    // Ahora leemos el refresh token desde la cookie
+   
     const refreshToken = req.cookies.refreshToken;
 
     if (!refreshToken) {
@@ -19,7 +20,6 @@ export async function refresh(req: Request, res: Response) {
     }
     const result = await refreshAccessToken(refreshToken);
 
-    // Setear nuevamente las cookies con los tokens renovados
     res.cookie('accessToken', result.accessToken, cookieOptions);
     res.cookie('refreshToken', result.refreshToken, cookieOptions);
 
@@ -35,14 +35,14 @@ export async function refresh(req: Request, res: Response) {
 
 export async function logout(req: Request, res: Response) {
   try {
-    // Leemos el refresh token desde la cookie
+   
     const refreshToken = req.cookies.refreshToken;
 
     if (refreshToken) {
       await revokeRefreshToken(refreshToken);
     }
 
-    // Borramos ambas cookies del navegador
+   
     res.clearCookie('accessToken', cookieOptions);
     res.clearCookie('refreshToken', cookieOptions);
 

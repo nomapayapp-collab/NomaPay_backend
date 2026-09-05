@@ -1,4 +1,4 @@
-// controllers/deposit.controller.ts
+
 import type { Response } from 'express';
 import type { AuthenticatedRequest } from '../middlewares/auth.middleware.js';
 import { depositFunds } from '../services/deposit.service.js';
@@ -12,7 +12,7 @@ export async function postDeposit(req: AuthenticatedRequest, res: Response) {
             return res.status(400).json({ error: 'Falta elegir la moneda o ingresar el monto.' });
         }
 
-        // El usuario viene del middleware de autenticación
+  
         const result = await depositFunds(req.user!.userId, {
             currencyCode,
             amount: Number(amount)

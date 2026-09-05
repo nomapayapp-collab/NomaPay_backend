@@ -26,7 +26,7 @@ Transaction.init(
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
     senderWalletId: { type: DataTypes.INTEGER, field: 'sender_wallet_id', allowNull: true },
     receiverWalletId: { type: DataTypes.INTEGER, field: 'receiver_wallet_id', allowNull: true },
-    type: { type: DataTypes.ENUM('buy', 'sell', 'transfer', 'exchange'), allowNull: false },
+    type: { type: DataTypes.ENUM('deposit', 'transfer', 'exchange'), allowNull: false },
     status: {
       type: DataTypes.ENUM('pending', 'completed', 'cancelled', 'rejected'),
       defaultValue: 'pending',

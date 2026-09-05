@@ -1,4 +1,4 @@
-// tests/exchange-rate.service.test.ts
+
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
     getExchangeRate,
@@ -28,6 +28,7 @@ describe('exchange-rate.service', () => {
 
     afterEach(() => {
         vi.unstubAllGlobals();
+        vi.useRealTimers();
     });
 
     it('devuelve 1 cuando origen y destino son la misma moneda (no llama a la API)', async () => {
@@ -89,10 +90,68 @@ describe('exchange-rate.service', () => {
         await expect(getRatesForBase('USD')).rejects.toThrow();
     });
 
-    it('lanza un error cuando la API responde con result != success', async () => {
-        const fetchMock = mockFetchOnce({ result: 'error', 'error-type': 'unsupported-code' });
+    it('si el primario responde con result != success, intenta el fallback y propaga el error si este también falla', async () => {
+        const fetchMock = vi
+            .fn()
+            .mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: async () => ({ result: 'error', 'error-type': 'unsupported-code' }),
+            })
+            .mockRejectedValueOnce(new Error('fallback también caído'));
         vi.stubGlobal('fetch', fetchMock);
 
-        await expect(getRatesForBase('XXX')).rejects.toThrow(/respuesta inválida/);
+        await expect(getRatesForBase('XXX')).rejects.toThrow();
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('usa el proveedor de respaldo si el primario falla', async () => {
+        const fetchMock = vi
+            .fn()
+            .mockRejectedValueOnce(new Error('network down'))
+            .mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: async () => ({ date: '2026-09-04', usd: { ars: 1350, brl: 5.6 } }),
+            });
+        vi.stubGlobal('fetch', fetchMock);
+
+        const rate = await getExchangeRate('ARS', 'USD');
+
+        expect(rate).toBe(1350);
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+        expect(fetchMock.mock.calls[1]?.[0]).toContain('/usd.json');
+    });
+
+    it('usa la caché vencida como último recurso si fallan ambos proveedores', async () => {
+        const okFetch = mockFetchOnce(successResponse('USD', { ARS: 1300 }));
+        vi.stubGlobal('fetch', okFetch);
+        await getRatesForBase('USD');
+
+      
+        vi.useFakeTimers();
+        vi.setSystemTime(Date.now() + 2 * 60 * 60 * 1000);
+
+        const bothFailing = vi
+            .fn()
+            .mockRejectedValueOnce(new Error('primary down'))
+            .mockRejectedValueOnce(new Error('fallback down'));
+        vi.stubGlobal('fetch', bothFailing);
+
+        const rates = await getRatesForBase('USD');
+
+        expect(rates.ARS).toBe(1300);
+        expect(bothFailing).toHaveBeenCalledTimes(2);
+    });
+
+    it('propaga un error si fallan ambos proveedores y no hay caché previa', async () => {
+        const bothFailing = vi
+            .fn()
+            .mockRejectedValueOnce(new Error('primary down'))
+            .mockRejectedValueOnce(new Error('fallback down'));
+        vi.stubGlobal('fetch', bothFailing);
+
+        await expect(getRatesForBase('USD')).rejects.toThrow();
+        expect(bothFailing).toHaveBeenCalledTimes(2);
     });
 });
