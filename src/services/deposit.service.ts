@@ -1,4 +1,3 @@
-
 import sequelize from '../db.js';
 import { Wallet } from '../models/wallet.model.js';
 import { Balance } from '../models/balance.model.js';
@@ -11,7 +10,22 @@ import { getWalletSummary } from './wallet.service.js';
 import type { WalletSummary } from './wallet.service.js';
 import { round2 } from '../utils/money.util.js';
 
-export const MAX_DEPOSIT_AMOUNT = Number(process.env.MAX_DEPOSIT_AMOUNT ?? 1_000_000);
+// Límite máximo por carga, definido por moneda. Cada uno puede sobreescribirse
+// por variable de entorno; si se agrega una moneda nueva y no tiene límite
+// propio configurado, se usa DEFAULT_MAX_DEPOSIT_AMOUNT como respaldo.
+export const DEPOSIT_LIMITS: { readonly USD: number; readonly ARS: number; readonly BRL: number } = {
+    USD: Number(process.env.MAX_DEPOSIT_USD ?? 10_000),
+    ARS: Number(process.env.MAX_DEPOSIT_ARS ?? 50_000_000),
+    BRL: Number(process.env.MAX_DEPOSIT_BRL ?? 170_000),
+};
+
+export const DEFAULT_MAX_DEPOSIT_AMOUNT = Number(process.env.MAX_DEPOSIT_AMOUNT ?? 1_000_000);
+
+export function getDepositLimit(currencyCode: string): number {
+
+    const limits: Record<string, number> = DEPOSIT_LIMITS;
+    return limits[currencyCode] ?? DEFAULT_MAX_DEPOSIT_AMOUNT;
+}
 
 export interface DepositInput {
     currencyCode: string;
@@ -37,9 +51,10 @@ export async function depositFunds(userId: number, input: DepositInput): Promise
     if (!Number.isFinite(amount) || amount <= 0) {
         throw new ValidationError('El monto debe ser un número mayor a 0.');
     }
-    if (amount > MAX_DEPOSIT_AMOUNT) {
+    const maxDeposit = getDepositLimit(currencyCode);
+    if (amount > maxDeposit) {
         throw new ValidationError(
-            `El monto máximo por carga es ${round2(MAX_DEPOSIT_AMOUNT)} ${currencyCode}.`
+            `El monto máximo por carga en ${currencyCode} es ${round2(maxDeposit)}.`
         );
     }
 

@@ -1,4 +1,3 @@
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockTransaction = {
@@ -52,7 +51,7 @@ const { assertActiveCurrency } = await import('../src/services/wallet-operations
 const { sendTransactionEmail } = await import('../src/mails/mail.js');
 const { getWalletSummary } = await import('../src/services/wallet.service.js');
 
-const { depositFunds, MAX_DEPOSIT_AMOUNT } = await import('../src/services/deposit.service.js');
+const { depositFunds, DEPOSIT_LIMITS, DEFAULT_MAX_DEPOSIT_AMOUNT } = await import('../src/services/deposit.service.js');
 
 function makeBalance(amount: string) {
   return {
@@ -87,19 +86,55 @@ describe('deposit.service — depositFunds', () => {
     await expect(depositFunds(42, { currencyCode: 'ARS', amount: NaN })).rejects.toThrow(/mayor a 0/);
   });
 
-  it(`rechaza montos por encima de MAX_DEPOSIT_AMOUNT (${MAX_DEPOSIT_AMOUNT})`, async () => {
+  it(`rechaza montos por encima del límite de ARS (${DEPOSIT_LIMITS.ARS})`, async () => {
     await expect(
-      depositFunds(42, { currencyCode: 'ARS', amount: MAX_DEPOSIT_AMOUNT + 1 })
-    ).rejects.toThrow(/monto máximo por carga/);
+      depositFunds(42, { currencyCode: 'ARS', amount: DEPOSIT_LIMITS.ARS + 1 })
+    ).rejects.toThrow(/monto máximo por carga en ARS/);
   });
 
-  it('acepta un monto exactamente igual a MAX_DEPOSIT_AMOUNT', async () => {
+  it('acepta un monto exactamente igual al límite de ARS', async () => {
     const balance = makeBalance('0');
     (Balance.findOne as any).mockResolvedValue(balance);
 
     await expect(
-      depositFunds(42, { currencyCode: 'ARS', amount: MAX_DEPOSIT_AMOUNT })
+      depositFunds(42, { currencyCode: 'ARS', amount: DEPOSIT_LIMITS.ARS })
     ).resolves.toBeDefined();
+  });
+
+  it(`rechaza montos por encima del límite de USD (${DEPOSIT_LIMITS.USD})`, async () => {
+    await expect(
+      depositFunds(42, { currencyCode: 'USD', amount: DEPOSIT_LIMITS.USD + 1 })
+    ).rejects.toThrow(/monto máximo por carga en USD/);
+  });
+
+  it('acepta un monto exactamente igual al límite de USD', async () => {
+    const balance = makeBalance('0');
+    (Balance.findOne as any).mockResolvedValue(balance);
+
+    await expect(
+      depositFunds(42, { currencyCode: 'USD', amount: DEPOSIT_LIMITS.USD })
+    ).resolves.toBeDefined();
+  });
+
+  it(`rechaza montos por encima del límite de BRL (${DEPOSIT_LIMITS.BRL})`, async () => {
+    await expect(
+      depositFunds(42, { currencyCode: 'BRL', amount: DEPOSIT_LIMITS.BRL + 1 })
+    ).rejects.toThrow(/monto máximo por carga en BRL/);
+  });
+
+  it('acepta un monto exactamente igual al límite de BRL', async () => {
+    const balance = makeBalance('0');
+    (Balance.findOne as any).mockResolvedValue(balance);
+
+    await expect(
+      depositFunds(42, { currencyCode: 'BRL', amount: DEPOSIT_LIMITS.BRL })
+    ).resolves.toBeDefined();
+  });
+
+  it('usa DEFAULT_MAX_DEPOSIT_AMOUNT para una moneda sin límite propio configurado', async () => {
+    await expect(
+      depositFunds(42, { currencyCode: 'EUR', amount: DEFAULT_MAX_DEPOSIT_AMOUNT + 1 })
+    ).rejects.toThrow(/monto máximo por carga en EUR/);
   });
 
   it('propaga el error de assertActiveCurrency si la moneda no está activa', async () => {

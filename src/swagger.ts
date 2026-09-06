@@ -85,6 +85,7 @@ export const swaggerSpec = {
                     cbu: { type: "string", nullable: true },
                     country: { type: "string", nullable: true, example: "AR" },
                     profilePictureUrl: { type: "string", nullable: true },
+                    theme: { type: "string", enum: ["light", "dark"], example: "light" },
                 },
             },
             UpdateProfileInput: {
@@ -413,6 +414,36 @@ export const swaggerSpec = {
                 },
             },
         },
+        "/users/me/theme": {
+            patch: {
+                tags: ["Users"],
+                summary: "Cambiar la preferencia de tema (claro/oscuro)",
+                security: [{ cookieAuth: [] }],
+                requestBody: {
+                    required: true,
+                    content: {
+                        "application/json": {
+                            schema: {
+                                type: "object",
+                                required: ["theme"],
+                                properties: {
+                                    theme: { type: "string", enum: ["light", "dark"], example: "dark" },
+                                },
+                            },
+                        },
+                    },
+                },
+                responses: {
+                    "200": {
+                        description: "Tema actualizado correctamente",
+                        content: { "application/json": { schema: { $ref: "#/components/schemas/UserProfile" } } },
+                    },
+                    "400": errorResponse("El theme debe ser 'light' o 'dark'"),
+                    "401": errorResponse("No autenticado"),
+                },
+            },
+        },
+
         "/wallets/me": {
             get: {
                 tags: ["Wallets"],
@@ -508,7 +539,7 @@ export const swaggerSpec = {
             post: {
                 tags: ["Wallets"],
                 summary: "Cargar dinero simulado a la wallet",
-                description: "Suma un monto directo al balance de la moneda elegida. No hay conversión ni comisión (a diferencia de /wallets/me/exchange). El monto máximo por carga está limitado por MAX_DEPOSIT_AMOUNT.",
+                description: "Suma un monto directo al balance de la moneda elegida. No hay conversión ni comisión (a diferencia de /wallets/me/exchange). El monto máximo por carga depende de la moneda: 10.000 USD, 50.000.000 ARS y 170.000 BRL. Una moneda sin límite propio configurado usa DEFAULT_MAX_DEPOSIT_AMOUNT.",
                 security: [{ cookieAuth: [] }],
                 requestBody: {
                     required: true,
@@ -525,6 +556,7 @@ export const swaggerSpec = {
                 },
             },
         },
+
         "/transfers": {
             post: {
                 tags: ["Transfers"],
