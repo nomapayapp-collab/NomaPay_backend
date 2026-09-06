@@ -3,10 +3,11 @@ import { registerWithGoogle, loginWithGoogle } from '../services/google.service.
 import { AppError } from '../errors/app-error.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
+const sameSite: 'none' | 'lax' = isProduction ? 'none' : 'lax';
 const cookieOptions = {
   httpOnly: true,
   secure: isProduction,
-  sameSite: 'none' as const,
+  sameSite,
 };
 
 export async function registerWithGoogleController(req: Request, res: Response) {

@@ -12,6 +12,7 @@ export interface UserProfile {
   cbu: string | null;
   country: string | null;
   profilePictureUrl: string | null;
+  theme: 'light' | 'dark';
 }
 
 const USERNAME_COOLDOWN_DAYS = 30;
@@ -77,8 +78,8 @@ export async function updateUserProfile(
   }
 
   if (input.alias && input.alias !== user.alias) {
-  updates.alias = input.alias;
-}
+    updates.alias = input.alias;
+  }
 
   try {
     await user.update(updates);
@@ -93,6 +94,16 @@ export async function updateUserProfile(
 
   return toProfile(user);
 }
+export async function updateTheme(userId: number, theme: 'light' | 'dark'): Promise<UserProfile> {
+  const user = await User.findByPk(userId);
+  if (!user) {
+    throw new NotFoundError('Usuario no encontrado.');
+  }
+
+  await user.update({ theme });
+  return toProfile(user);
+}
+
 
 function toProfile(user: User): UserProfile {
   return {
@@ -105,5 +116,6 @@ function toProfile(user: User): UserProfile {
     cbu: user.cbu,
     country: user.country,
     profilePictureUrl: user.profilePictureUrl,
+    theme: user.theme,
   };
 }

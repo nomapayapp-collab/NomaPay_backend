@@ -3,6 +3,7 @@ import { Wallet } from '../models/wallet.model.js';
 import { Balance } from '../models/balance.model.js';
 import { Currency } from '../models/currency.model.js';
 import { NotFoundError, ValidationError } from '../errors/app-error.js';
+import { round2 } from '../utils/money.util.js';
 
 export interface BalanceDetail {
   currencyCode: string;
@@ -39,7 +40,8 @@ export async function getWalletSummary(userId: number): Promise<WalletSummary> {
         currencyCode: b.currencyCode,
         currencyName: currency?.name ?? b.currencyCode,
         symbol: currency?.symbol ?? null,
-        amount: b.amount,
+        
+        amount: round2(b.amount),
       };
     }),
   };

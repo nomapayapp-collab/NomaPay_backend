@@ -7,16 +7,17 @@ export async function login(req: Request, res: Response) {
     const result = await loginUser(req.body);
 
     const isProduction = process.env.NODE_ENV === 'production';
+    const sameSite: 'none' | 'lax' = isProduction ? 'none' : 'lax';
     const cookieOptions = {
       httpOnly: true,
       secure: isProduction, // En Railway será true
-      sameSite: 'none' as const, // Necesario si Vercel y Railway están en dominios distintos
+      sameSite, // Necesario si Vercel y Railway están en dominios distintos
     };
 
     res.cookie('accessToken', result.accessToken, cookieOptions);
     res.cookie('refreshToken', result.refreshToken, cookieOptions);
 
-    // Solo devolvemos los datos del usuario, sin los tokens
+    
     return res.status(200).json(result.user);
   } catch (err) {
     if (err instanceof AppError) {

@@ -26,15 +26,17 @@ interface UserAttributes {
   emailVerifiedAt?: Date | null;
   kycStatus?: 'not_started' | 'pending' | 'approved' | 'rejected';
   kycReviewedAt?: Date | null;
+  theme?: 'light' | 'dark';
+
 }
 
 
-interface UserCreationAttributes extends Optional<UserAttributes, 
-   'id' | 'documentType' | 'documentNumber' | 'username' | 'usernameUpdatedAt' | 
-  'alias' | 'cbu' | 'profilePictureUrl' | 'createdAt' | 'passwordChangedAt' | 
-  'resetPasswordToken' | 'resetPasswordTokenExpiresAt' | 'isAdmin' | 
+interface UserCreationAttributes extends Optional<UserAttributes,
+  'id' | 'documentType' | 'documentNumber' | 'username' | 'usernameUpdatedAt' |
+  'alias' | 'cbu' | 'profilePictureUrl' | 'createdAt' | 'passwordChangedAt' |
+  'resetPasswordToken' | 'resetPasswordTokenExpiresAt' | 'isAdmin' |
   'emailVerifiedAt' | 'kycStatus' | 'kycReviewedAt' | 'googleId' | 'passwordHash' | 'country'
-> {}
+> { }
 
 export class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
   declare id: number;
@@ -59,6 +61,8 @@ export class User extends Model<UserAttributes, UserCreationAttributes> implemen
   declare emailVerifiedAt: Date | null;
   declare kycStatus: 'not_started' | 'pending' | 'approved' | 'rejected';
   declare kycReviewedAt: Date | null;
+  declare theme: 'light' | 'dark';
+
 }
 
 User.init(
@@ -102,7 +106,7 @@ User.init(
     },
     username: {
       type: DataTypes.STRING(50),
-      allowNull: true, 
+      allowNull: true,
       unique: true,
     },
     usernameUpdatedAt: {
@@ -172,13 +176,19 @@ User.init(
       allowNull: true,
       field: 'kyc_reviewed_at',
     },
+    theme: {
+      type: DataTypes.STRING(10),
+      defaultValue: 'light',
+      allowNull: false,
+    },
+
   },
   {
     sequelize,
     tableName: 'users',
     timestamps: false,
     indexes: [
-    { unique: true, fields: ['document_type', 'document_number'] },
-  ],
+      { unique: true, fields: ['document_type', 'document_number'] },
+    ],
   }
 );

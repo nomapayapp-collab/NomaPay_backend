@@ -13,6 +13,21 @@ export function validateRegister(req: Request, res: Response, next: NextFunction
   if (password.length < 8 || password.length > 32) {
     return res.status(400).json({ error: 'La contraseña debe tener entre 8 y 32 caracteres.' });
   }
+if (!/[a-z]/.test(password)) {
+    return res.status(400).json({ error: 'La contraseña debe tener al menos una minúscula.' });
+  }
+
+  if (!/[A-Z]/.test(password)) {
+    return res.status(400).json({ error: 'La contraseña debe tener al menos una mayúscula.' });
+  }
+
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+    return res.status(400).json({ error: 'La contraseña debe tener al menos un carácter especial.' });
+  }
+   if (!/[0-9]/.test(password)) {
+    return res.status(400).json({ error: 'La contraseña debe tener al menos un número.' });
+  }
+
   if (!/^[A-Za-z]{2}$/.test(country)) {
     return res.status(400).json({ error: 'El país debe ser un código ISO de 2 letras (ej: AR, BR, US).' });
   }
