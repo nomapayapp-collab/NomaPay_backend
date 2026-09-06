@@ -1,4 +1,4 @@
-// controllers/wallet.controller.ts
+
 import type { Response } from 'express';
 import type { AuthenticatedRequest } from '../middlewares/auth.middleware.js';
 import { getWalletSummary, updatePreferredCurrency } from '../services/wallet.service.js';
