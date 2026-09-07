@@ -1,0 +1,1 @@
+ALTER TABLE transactions ADD COLUMN message VARCHAR(100) NULL;

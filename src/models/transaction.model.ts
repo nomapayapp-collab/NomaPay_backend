@@ -19,6 +19,7 @@ export class Transaction extends Model<InferAttributes<Transaction>, InferCreati
   declare finalAmount: string | null;
   declare exchangeRate: string | null;
   declare transactionDate: CreationOptional<Date>;
+  declare message: CreationOptional<string | null>;
 }
 
 Transaction.init(
@@ -38,6 +39,7 @@ Transaction.init(
     finalAmount: { type: DataTypes.DECIMAL(20, 8), field: 'final_amount', allowNull: true },
     exchangeRate: { type: DataTypes.DECIMAL(20, 8), field: 'exchange_rate', allowNull: true },
     transactionDate: { type: DataTypes.DATE, field: 'transaction_date', defaultValue: DataTypes.NOW },
+    message: { type: DataTypes.STRING(100), allowNull: true }
   },
   {
     sequelize,
