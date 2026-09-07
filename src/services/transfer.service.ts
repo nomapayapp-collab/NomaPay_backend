@@ -14,6 +14,7 @@ export interface TransferInput {
     aliasOrCbu: string;
     currencyCode: string;
     amount: number;
+    message?: string;
 }
 
 export async function transferFunds(senderId: number, input: TransferInput) {
@@ -104,6 +105,7 @@ export async function transferFunds(senderId: number, input: TransferInput) {
             amount: amount.toFixed(8),
             fee: '0',
             finalAmount: amount.toFixed(8),
+            message: input.message || null,
         }, { transaction: t });
 
         await t.commit();

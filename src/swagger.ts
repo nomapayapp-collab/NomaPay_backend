@@ -195,6 +195,7 @@ export const swaggerSpec = {
                     aliasOrCbu: { type: "string", description: "Alias o CBU del usuario destino.", example: "juan.perez" },
                     currencyCode: { type: "string", example: "ARS" },
                     amount: { type: "number", example: 2500 },
+                    message: { type: "string", example: "Para la pizza 🍕", description: "Mensaje opcional para el destinatario (máx 100 caracteres)." }
                 },
             },
             TransferResult: {
@@ -613,14 +614,61 @@ export const swaggerSpec = {
                                             transactionDate: { type: "string", format: "date-time", example: "2026-09-06T14:05:32.000Z" },
                                             amount: { type: "number", example: 2500 },
                                             currencyCode: { type: "string", example: "ARS" },
+                                            fee: { type: "number", example: 12.5, description: "Comisión cobrada. Siempre 0 en transferencias." },
+                                            message: { type: "string", nullable: true, example: "Para la pizza 🍕" },
+                                            counterparty: {
+                                                type: "object",
+                                                nullable: true,
+                                                description: "Solo aparece si es un pago o cobro (transferencia).",
+                                                properties: {
+                                                    name: { type: "string", example: "María Gómez" },
+                                                    alias: { type: "string", example: "maria.gomez" }
+                                                }
+                                            },
                                             exchangeData: {
                                                 type: "object",
+                                                nullable: true,
                                                 properties: {
                                                     currencyOrigin: { type: "string", example: "ARS" },
                                                     currencyDestination: { type: "string", example: "USD" },
                                                     finalAmount: { type: "number", example: 2.5 }
                                                 }
                                             }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": errorResponse("No autenticado"),
+                    "404": errorResponse("El usuario no tiene una wallet asociada"),
+                }
+            }
+        },
+
+        "/contacts": {
+            get: {
+                tags: ["Transfers"],
+                summary: "Obtener contactos frecuentes",
+                description: "Devuelve hasta 3 usuarios con los que el usuario autenticado tuvo más interacciones (transferencias enviadas o recibidas). Si no tiene historial, devuelve un array vacío [].",
+                security: [{ cookieAuth: [] }],
+                responses: {
+                    "200": {
+                        description: "Lista de contactos obtenida (Top 3)",
+                        content: {
+                            "application/json": {
+                                schema: {
+                                    type: "array",
+                                    items: {
+                                        type: "object",
+                                        properties: {
+                                            id: { type: "integer", example: 8 },
+                                            alias: { type: "string", nullable: true, example: "maria.gomez" },
+                                            cbu: { type: "string", nullable: true, example: "0000003100012345678902" },
+                                            name: { type: "string", example: "María" },
+                                            surname: { type: "string", example: "Gómez" },
+                                            profilePictureUrl: { type: "string", nullable: true },
+                                            interactionCount: { type: "integer", example: 5 }
                                         }
                                     }
                                 }
