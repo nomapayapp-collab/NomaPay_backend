@@ -50,7 +50,7 @@ describe('mail.ts — sendTransactionEmail', () => {
 
   it('no hace fetch si MAIL_SERVICE_ENABLED=false (queda solo el log)', async () => {
     process.env.MAIL_SERVICE_ENABLED = 'false';
-    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => { });
     const { sendTransactionEmail } = await import('../src/mails/mail.js');
 
     await sendTransactionEmail(makeUser(), baseDetails);
@@ -61,7 +61,7 @@ describe('mail.ts — sendTransactionEmail', () => {
 
   it('avisa por consola y no hace fetch si falta MAIL_SERVICE_URL', async () => {
     delete process.env.MAIL_SERVICE_URL;
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => { });
     const { sendTransactionEmail } = await import('../src/mails/mail.js');
 
     await sendTransactionEmail(makeUser(), baseDetails);
@@ -72,7 +72,7 @@ describe('mail.ts — sendTransactionEmail', () => {
 
   it('avisa por consola y no hace fetch si falta MAIL_INTERNAL_SECRET', async () => {
     delete process.env.MAIL_INTERNAL_SECRET;
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => { });
     const { sendTransactionEmail } = await import('../src/mails/mail.js');
 
     await sendTransactionEmail(makeUser(), baseDetails);
@@ -172,7 +172,7 @@ describe('mail.ts — sendTransactionEmail', () => {
 
   it('loguea error pero no tira excepción si el servicio de mail responde con error', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }));
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
     const { sendTransactionEmail } = await import('../src/mails/mail.js');
 
     await expect(sendTransactionEmail(makeUser(), baseDetails)).resolves.toBeUndefined();
@@ -181,7 +181,7 @@ describe('mail.ts — sendTransactionEmail', () => {
 
   it('loguea error pero no tira excepción si el fetch falla (red o timeout)', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network error')));
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
     const { sendTransactionEmail } = await import('../src/mails/mail.js');
 
     await expect(sendTransactionEmail(makeUser(), baseDetails)).resolves.toBeUndefined();

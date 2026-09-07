@@ -1,11 +1,4 @@
 
-// N// Notifica mandando SOLO los datos de la transacción al servicio de mail del front.
-// El front arma el asunto, texto y HTML con sus templates de Stripo.
-//
-// Contrato con el front:
-//   POST ${MAIL_SERVICE_URL}/api/send-mail
-//   headers: { "Content-Type": "application/json", "x-internal-secret": MAIL_INTERNAL_SECRET }
-//   body:    { to, type, variables }
 
 import type { User } from '../models/users.model.js';
 import type { TransactionType } from '../models/transaction.model.js';
@@ -27,14 +20,13 @@ export interface TransactionEmailDetails {
   finalAmount: string;
   currencyOrigin: string;
   currencyDestination: string;
-  // Sin tasa de cambio real (ej: transfer, misma moneda de origen y destino),
-  
+  exchangeRate?: string;
   transactionDate: Date;
   role?: 'sender' | 'receiver';
   counterpartyName?: string;
 }
 
-// Le dice al front qué template usar (deposit/exchange/transfer enviado/recibido).
+
 function buildTemplateType(details: TransactionEmailDetails): string {
   if (details.type === 'transfer') {
     return details.role === 'receiver' ? 'transaction_received' : 'transaction_sent';
@@ -97,6 +89,7 @@ export async function sendTransactionEmail(user: User, details: TransactionEmail
       COMISION: details.fee,
       MONTO_FINAL: details.finalAmount,
       MONEDA_DESTINO: details.currencyDestination,
+      TASA_CAMBIO: details.exchangeRate ?? '',
       FECHA: formattedDate,
       CONTRAPARTE: details.counterpartyName ?? '',
     },

@@ -1,4 +1,4 @@
-// tests/transfer.service.test.ts
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Op } from 'sequelize';
 
@@ -75,6 +75,49 @@ describe('transfer.service — transferFunds', () => {
     );
     (Transaction.create as any).mockImplementation((data: any) =>
       Promise.resolve({ id: 55, ...data, transactionDate: new Date('2026-01-01T00:00:00Z') })
+    );
+  });
+
+  it('guarda el mensaje personalizado en la transacción cuando se provee', async () => {
+    const senderBalance = makeBalance('10000');
+    const receiverBalance = makeBalance('0');
+    (Balance.findOne as any).mockImplementation(({ where }: any) =>
+      Promise.resolve(where.walletId === 1 ? senderBalance : receiverBalance)
+    );
+
+    await transferFunds(SENDER_ID, {
+      aliasOrCbu: 'juan.perez',
+      currencyCode: 'ARS',
+      amount: 500,
+      message: 'Regalo de cumpleaños 🎁',
+    });
+
+    expect(Transaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Regalo de cumpleaños 🎁',
+      }),
+      expect.anything()
+    );
+  });
+
+  it('guarda message como null si no se envía ningún mensaje', async () => {
+    const senderBalance = makeBalance('10000');
+    const receiverBalance = makeBalance('0');
+    (Balance.findOne as any).mockImplementation(({ where }: any) =>
+      Promise.resolve(where.walletId === 1 ? senderBalance : receiverBalance)
+    );
+
+    await transferFunds(SENDER_ID, {
+      aliasOrCbu: 'juan.perez',
+      currencyCode: 'ARS',
+      amount: 500,
+    });
+
+    expect(Transaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: null,
+      }),
+      expect.anything()
     );
   });
 
