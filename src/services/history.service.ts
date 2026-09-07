@@ -25,7 +25,7 @@ export interface HistoryItem {
     };
 }
 
-export async function getHistory(userId: number): Promise<HistoryItem[]> {
+export async function getUserHistory(userId: number): Promise<HistoryItem[]> {
     const wallet = await Wallet.findOne({ where: { userId } });
     if (!wallet) {
         throw new NotFoundError('El usuario no tiene una wallet asociada.');
