@@ -208,6 +208,7 @@ CREATE TABLE transactions (
     final_amount NUMERIC(20, 8),
     exchange_rate NUMERIC(20, 8),
     transaction_date TIMESTAMPTZ NOT NULL DEFAULT now(),
+    message VARCHAR(100) NULL,
     CONSTRAINT chk_amount_positive CHECK (amount > 0),
     CONSTRAINT chk_fee_non_negative CHECK (fee >= 0),
     CONSTRAINT chk_final_amount_non_negative CHECK (final_amount >= 0)
