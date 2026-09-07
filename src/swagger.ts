@@ -386,6 +386,19 @@ export const swaggerSpec = {
                     "409": errorResponse("Ese username o alias ya está en uso"),
                 },
             },
+            delete: {
+                tags: ["Users"],
+                summary: "Eliminar cuenta de usuario (Soft Delete)",
+                description: "Marca la cuenta como eliminada lógicamente, liberando el email, username y alias. Borra la cookie de sesión.",
+                security: [{ cookieAuth: [] }],
+                responses: {
+                    "200": { description: "Cuenta eliminada correctamente" },
+                    "400": errorResponse("No podés eliminar tu cuenta porque tenés saldo a favor"),
+                    "401": errorResponse("No autenticado"),
+                    "404": errorResponse("Usuario no encontrado"),
+                },
+            },
+
         },
         "/users/me/password": {
             patch: {
@@ -492,7 +505,7 @@ export const swaggerSpec = {
                 tags: ["Wallets"],
                 summary: "Intercambiar monedas",
                 description:
-                    "Convierte un monto de fromCurrency a toCurrency dentro de la misma wallet, usando la tasa de cambio actual (con caché). Se cobra una comisión (TRANSACTION_FEE_PERCENTAGE) sobre el monto de origen. El usuario elige libremente ambas monedas. Al completarse, se envía un email de confirmación vía AWS SES.",
+                    "Convierte un monto de fromCurrency a toCurrency dentro de la misma wallet, usando la tasa de cambio actual (con caché). Se cobra una comisión (TRANSACTION_FEE_PERCENTAGE) sobre el monto de origen. El usuario elige libremente ambas monedas. Al completarse, se notifica al usuario por email (el mail lo envía el servicio de mail del front; si falla, no afecta el resultado del exchange).",
                 security: [{ cookieAuth: [] }],
                 requestBody: {
                     required: true,
@@ -561,7 +574,7 @@ export const swaggerSpec = {
             post: {
                 tags: ["Transfers"],
                 summary: "Transferir dinero a otro usuario",
-                description: "Transfiere un monto de una moneda desde la wallet del usuario autenticado hacia la de otro usuario, identificado por su alias o CBU. No se cobra comisión.",
+                description: "Transfiere un monto de una moneda desde la wallet del usuario autenticado hacia la de otro usuario, identificado por su alias o CBU. No se cobra comisión. Al completarse, se notifica por email tanto al emisor como al receptor (el mail lo envía el servicio de mail del front; si falla, no afecta el resultado de la transferencia).",
                 security: [{ cookieAuth: [] }],
                 requestBody: {
                     required: true,
@@ -578,6 +591,48 @@ export const swaggerSpec = {
                 },
             },
         },
+        "/history": {
+            get: {
+                tags: ["Wallets"],
+                summary: "Obtener historial de movimientos (Analytics)",
+                description: "Devuelve todo el historial de operaciones (cargas, cobros, pagos, cambios) de la wallet del usuario, ordenado del más reciente al más antiguo.",
+                security: [{ cookieAuth: [] }],
+                responses: {
+                    "200": {
+                        description: "Historial completo obtenido",
+                        content: {
+                            "application/json": {
+                                schema: {
+                                    type: "array",
+                                    items: {
+                                        type: "object",
+                                        properties: {
+                                            id: { type: "integer", example: 15 },
+                                            operationType: { type: "string", enum: ["carga", "pago", "cobro", "cambio"], example: "cobro" },
+                                            status: { type: "string", example: "completed" },
+                                            transactionDate: { type: "string", format: "date-time", example: "2026-09-06T14:05:32.000Z" },
+                                            amount: { type: "number", example: 2500 },
+                                            currencyCode: { type: "string", example: "ARS" },
+                                            exchangeData: {
+                                                type: "object",
+                                                properties: {
+                                                    currencyOrigin: { type: "string", example: "ARS" },
+                                                    currencyDestination: { type: "string", example: "USD" },
+                                                    finalAmount: { type: "number", example: 2.5 }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": errorResponse("No autenticado"),
+                    "404": errorResponse("El usuario no tiene una wallet asociada"),
+                }
+            }
+        },
+
         "/chatbot/message": {
             post: {
                 tags: ["Chatbot"],

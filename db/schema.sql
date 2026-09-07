@@ -30,6 +30,7 @@ CREATE TABLE users (
     kyc_status kyc_status_type NOT NULL DEFAULT 'not_started',
     kyc_reviewed_at TIMESTAMPTZ,
     theme VARCHAR(10) DEFAULT 'light',
+    deleted_at TIMESTAMPTZ NULL,
     CONSTRAINT uq_users_email UNIQUE (email),
     CONSTRAINT uq_users_username UNIQUE (username),
     CONSTRAINT uq_users_alias UNIQUE (alias),
