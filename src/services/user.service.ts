@@ -1,6 +1,8 @@
 // services/user.service.ts
 import { User } from '../models/users.model.js';
 import { ConflictError, NotFoundError, ValidationError } from '../errors/app-error.js';
+import { Wallet } from '../models/wallet.model.js';
+import { Balance } from '../models/balance.model.js';
 
 export interface UserProfile {
   id: number;
@@ -117,5 +119,32 @@ function toProfile(user: User): UserProfile {
     country: user.country,
     profilePictureUrl: user.profilePictureUrl,
     theme: user.theme,
-  };
+  }
+
+
 }
+
+export async function deleteUserAccount(userId: number): Promise<void> {
+  const user = await User.findByPk(userId);
+  if (!user) throw new NotFoundError('Usuario no encontrado.');
+  const wallet = await Wallet.findOne({ where: { userId } });
+  if (wallet) {
+    const balances = await Balance.findAll({ where: { walletId: wallet.id } });
+
+    // Verificamos si tiene saldo > 0 en alguna moneda
+    const hasMoney = balances.some(b => Number(b.amount) > 0);
+    if (hasMoney) {
+      throw new ValidationError('No podés eliminar tu cuenta porque tenés saldo a favor. Transferilo o cambialo antes de darte de baja.');
+    }
+  }
+  // Renombramos los campos únicos para que pueda volver a registrarse
+  await user.update({
+    email: `deleted_${user.id}_${user.email}`,
+    username: null,
+    alias: null,
+    googleId: null,
+    cbu: null
+  });
+  // Esto hace el soft-delete gracias al paranoid: true
+  await user.destroy();
+};

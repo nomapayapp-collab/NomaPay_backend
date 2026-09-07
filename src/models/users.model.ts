@@ -27,6 +27,7 @@ interface UserAttributes {
   kycStatus?: 'not_started' | 'pending' | 'approved' | 'rejected';
   kycReviewedAt?: Date | null;
   theme?: 'light' | 'dark';
+  deletedAt?: Date | null;
 
 }
 
@@ -35,7 +36,7 @@ interface UserCreationAttributes extends Optional<UserAttributes,
   'id' | 'documentType' | 'documentNumber' | 'username' | 'usernameUpdatedAt' |
   'alias' | 'cbu' | 'profilePictureUrl' | 'createdAt' | 'passwordChangedAt' |
   'resetPasswordToken' | 'resetPasswordTokenExpiresAt' | 'isAdmin' |
-  'emailVerifiedAt' | 'kycStatus' | 'kycReviewedAt' | 'googleId' | 'passwordHash' | 'country'
+  'emailVerifiedAt' | 'kycStatus' | 'kycReviewedAt' | 'googleId' | 'passwordHash' | 'country' | 'deletedAt'
 > { }
 
 export class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
@@ -62,6 +63,7 @@ export class User extends Model<UserAttributes, UserCreationAttributes> implemen
   declare kycStatus: 'not_started' | 'pending' | 'approved' | 'rejected';
   declare kycReviewedAt: Date | null;
   declare theme: 'light' | 'dark';
+  declare deletedAt: Date | null;
 
 }
 
@@ -187,6 +189,8 @@ User.init(
     sequelize,
     tableName: 'users',
     timestamps: false,
+    paranoid: true,
+    deletedAt: 'deleted_at',
     indexes: [
       { unique: true, fields: ['document_type', 'document_number'] },
     ],

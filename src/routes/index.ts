@@ -8,6 +8,8 @@ import walletRoutes from "./wallet.routes.js";
 import depositRoutes from "./deposit.routes.js";
 import transferRoutes from "./transfer.routes.js";
 import chatbotRoutes from "./chatbot.routes.js";
+import historyRoutes from "./history.routes.js";
+
 
 const router = Router();
 
@@ -20,5 +22,7 @@ router.use("/wallets", walletRoutes);
 router.use("/wallets", depositRoutes);
 router.use("/transfers", transferRoutes);
 router.use("/chatbot", chatbotRoutes);
+router.use("/history", historyRoutes);
+
 
 export default router;
