@@ -1,4 +1,4 @@
-// services/transfer.service.ts
+
 import { Op } from 'sequelize';
 import sequelize from '../db.js';
 import { User } from '../models/users.model.js';
@@ -104,21 +104,41 @@ export async function transferFunds(senderId: number, input: TransferInput) {
             amount: amount.toFixed(8),
             fee: '0',
             finalAmount: amount.toFixed(8),
-            exchangeRate: null,
         }, { transaction: t });
 
         await t.commit();
         committed = true;
 
-        // 6. Enviar emails
-        /* const senderUser = await User.findByPk(senderId);
-         if (senderUser) {
-             sendTransactionEmail(senderUser, {
-                 currencyCode,
-                 amount: round2(amount),
-                 transactionDate: createdTransaction.transactionDate,
-             }).catch(err => console.error('Error email emisor:', err));
-         }*/
+        // 6. Enviar emails a las dos puntas de la transferencia.
+        // No hay conversión de moneda en un transfer, así que currencyDestination
+        // va con la misma moneda de origen y exchangeRate directamente no se manda
+        // (queda undefined -> el mail.ts lo resuelve como '' para el template).
+        const senderUser = await User.findByPk(senderId);
+        if (senderUser) {
+            sendTransactionEmail(senderUser, {
+                type: 'transfer',
+                amount: round2(amount),
+                fee: '0.00',
+                finalAmount: round2(amount),
+                currencyOrigin: currencyCode,
+                currencyDestination: currencyCode,
+                transactionDate: createdTransaction.transactionDate,
+                role: 'sender',
+                counterpartyName: `${receiverUser.name} ${receiverUser.surname}`,
+            }).catch((err) => console.error('❌ Error enviando email al emisor de la transferencia:', err));
+        }
+
+        sendTransactionEmail(receiverUser, {
+            type: 'transfer',
+            amount: round2(amount),
+            fee: '0.00',
+            finalAmount: round2(amount),
+            currencyOrigin: currencyCode,
+            currencyDestination: currencyCode,
+            transactionDate: createdTransaction.transactionDate,
+            role: 'receiver',
+            counterpartyName: senderUser ? `${senderUser.name} ${senderUser.surname}` : '',
+        }).catch((err) => console.error('❌ Error enviando email al receptor de la transferencia:', err));
 
         return {
             message: 'Transferencia exitosa',
