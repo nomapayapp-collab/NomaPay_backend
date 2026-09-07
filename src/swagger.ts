@@ -505,7 +505,7 @@ export const swaggerSpec = {
                 tags: ["Wallets"],
                 summary: "Intercambiar monedas",
                 description:
-                    "Convierte un monto de fromCurrency a toCurrency dentro de la misma wallet, usando la tasa de cambio actual (con caché). Se cobra una comisión (TRANSACTION_FEE_PERCENTAGE) sobre el monto de origen. El usuario elige libremente ambas monedas. Al completarse, se envía un email de confirmación vía AWS SES.",
+                    "Convierte un monto de fromCurrency a toCurrency dentro de la misma wallet, usando la tasa de cambio actual (con caché). Se cobra una comisión (TRANSACTION_FEE_PERCENTAGE) sobre el monto de origen. El usuario elige libremente ambas monedas. Al completarse, se notifica al usuario por email (el mail lo envía el servicio de mail del front; si falla, no afecta el resultado del exchange).",
                 security: [{ cookieAuth: [] }],
                 requestBody: {
                     required: true,
@@ -574,7 +574,7 @@ export const swaggerSpec = {
             post: {
                 tags: ["Transfers"],
                 summary: "Transferir dinero a otro usuario",
-                description: "Transfiere un monto de una moneda desde la wallet del usuario autenticado hacia la de otro usuario, identificado por su alias o CBU. No se cobra comisión.",
+                description: "Transfiere un monto de una moneda desde la wallet del usuario autenticado hacia la de otro usuario, identificado por su alias o CBU. No se cobra comisión. Al completarse, se notifica por email tanto al emisor como al receptor (el mail lo envía el servicio de mail del front; si falla, no afecta el resultado de la transferencia).",
                 security: [{ cookieAuth: [] }],
                 requestBody: {
                     required: true,

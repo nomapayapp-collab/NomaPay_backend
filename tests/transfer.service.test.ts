@@ -15,7 +15,7 @@ vi.mock('../src/db.js', () => ({
 }));
 
 vi.mock('../src/models/users.model.js', () => ({
-  User: { findOne: vi.fn() },
+  User: { findOne: vi.fn(), findByPk: vi.fn() },
 }));
 
 vi.mock('../src/models/wallet.model.js', () => ({
@@ -48,7 +48,8 @@ const { sendTransactionEmail } = await import('../src/mails/mail.js');
 const { transferFunds } = await import('../src/services/transfer.service.js');
 
 const SENDER_ID = 42;
-const RECEIVER = { id: 7, name: 'Juan', surname: 'Pérez', alias: 'juan.perez', cbu: '000111222' };
+const SENDER_USER = { id: SENDER_ID, name: 'Ana', surname: 'Gómez', email: 'ana@test.com' };
+const RECEIVER = { id: 7, name: 'Juan', surname: 'Pérez', alias: 'juan.perez', cbu: '000111222', email: 'juan@test.com' };
 
 function makeBalance(amount: string) {
   return {
@@ -68,6 +69,7 @@ describe('transfer.service — transferFunds', () => {
 
     (assertActiveCurrency as any).mockResolvedValue({ code: 'ARS', isActive: true });
     (User.findOne as any).mockResolvedValue(RECEIVER);
+    (User.findByPk as any).mockResolvedValue(SENDER_USER);
     (Wallet.findOne as any).mockImplementation(({ where }: any) =>
       Promise.resolve(where.userId === SENDER_ID ? { id: 1, userId: SENDER_ID } : { id: 2, userId: RECEIVER.id })
     );
@@ -214,7 +216,6 @@ describe('transfer.service — transferFunds', () => {
         amount: (2500).toFixed(8),
         fee: '0',
         finalAmount: (2500).toFixed(8),
-        exchangeRate: null,
       }),
       expect.anything()
     );
@@ -227,7 +228,7 @@ describe('transfer.service — transferFunds', () => {
     expect(result.transaction.currencyCode).toBe('ARS');
   });
 
-  it('actualmente NO manda email de confirmación (el bloque está comentado en el service)', async () => {
+  it('manda email tanto al emisor como al receptor, con moneda de origen=destino y sin exchangeRate', async () => {
     const senderBalance = makeBalance('10000');
     const receiverBalance = makeBalance('0');
     (Balance.findOne as any).mockImplementation(({ where }: any) =>
@@ -236,7 +237,51 @@ describe('transfer.service — transferFunds', () => {
 
     await transferFunds(SENDER_ID, { aliasOrCbu: 'juan.perez', currencyCode: 'ARS', amount: 100 });
 
-    expect(sendTransactionEmail).not.toHaveBeenCalled();
+    expect(sendTransactionEmail).toHaveBeenCalledTimes(2);
+
+    expect(sendTransactionEmail).toHaveBeenCalledWith(
+      SENDER_USER,
+      expect.objectContaining({
+        type: 'transfer',
+        role: 'sender',
+        amount: '100.00',
+        fee: '0.00',
+        finalAmount: '100.00',
+        currencyOrigin: 'ARS',
+        currencyDestination: 'ARS',
+        counterpartyName: 'Juan Pérez',
+      })
+    );
+    expect((sendTransactionEmail as any).mock.calls[0][1]).not.toHaveProperty('exchangeRate');
+
+    expect(sendTransactionEmail).toHaveBeenCalledWith(
+      RECEIVER,
+      expect.objectContaining({
+        type: 'transfer',
+        role: 'receiver',
+        currencyOrigin: 'ARS',
+        currencyDestination: 'ARS',
+        counterpartyName: 'Ana Gómez',
+      })
+    );
+    expect((sendTransactionEmail as any).mock.calls[1][1]).not.toHaveProperty('exchangeRate');
+  });
+
+  it('si no encuentra al senderUser por findByPk, igual manda el email al receptor (con counterpartyName vacío)', async () => {
+    const senderBalance = makeBalance('10000');
+    const receiverBalance = makeBalance('0');
+    (Balance.findOne as any).mockImplementation(({ where }: any) =>
+      Promise.resolve(where.walletId === 1 ? senderBalance : receiverBalance)
+    );
+    (User.findByPk as any).mockResolvedValue(null);
+
+    await transferFunds(SENDER_ID, { aliasOrCbu: 'juan.perez', currencyCode: 'ARS', amount: 100 });
+
+    expect(sendTransactionEmail).toHaveBeenCalledTimes(1);
+    expect(sendTransactionEmail).toHaveBeenCalledWith(
+      RECEIVER,
+      expect.objectContaining({ role: 'receiver', counterpartyName: '' })
+    );
   });
 
   it('propaga el error de assertActiveCurrency si la moneda no está activa', async () => {
