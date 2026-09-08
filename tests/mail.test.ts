@@ -1,4 +1,3 @@
-
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const ORIGINAL_ENV = { ...process.env };
@@ -39,6 +38,8 @@ describe('mail.ts — sendTransactionEmail', () => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
+
+
 
   it('no hace fetch si el usuario no tiene email cargado', async () => {
     const { sendTransactionEmail } = await import('../src/mails/mail.js');
@@ -81,6 +82,8 @@ describe('mail.ts — sendTransactionEmail', () => {
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('MAIL_INTERNAL_SECRET'));
   });
 
+
+
   it('llama a POST {MAIL_SERVICE_URL}/api/send-mail con los headers correctos', async () => {
     const { sendTransactionEmail } = await import('../src/mails/mail.js');
 
@@ -95,31 +98,73 @@ describe('mail.ts — sendTransactionEmail', () => {
     );
   });
 
-  it('arma el body con to/type/variables mapeando los datos de la transacción', async () => {
+  it('el body siempre trae to/type/variables, y NUMERO_OPERACION cae al fallback si no viene operationNumber', async () => {
     const { sendTransactionEmail } = await import('../src/mails/mail.js');
-    const user = makeUser({ email: 'gisella@test.com', name: 'Gisella' });
 
-    await sendTransactionEmail(user, { ...baseDetails, type: 'deposit' });
+    await sendTransactionEmail(makeUser({ email: 'gisella@test.com' }), baseDetails);
 
     const [, options] = (fetch as any).mock.calls[0];
     const body = JSON.parse(options.body);
 
     expect(body.to).toBe('gisella@test.com');
     expect(body.type).toBe('transaction_deposit');
-    expect(body.variables).toEqual(
-      expect.objectContaining({
-        NOMBRE: 'Gisella',
-        MONTO: '100.00',
-        MONEDA_ORIGEN: 'ARS',
-        COMISION: '0.00',
-        MONTO_FINAL: '100.00',
-        MONEDA_DESTINO: 'ARS',
-        TASA_CAMBIO: '1.00',
-        CONTRAPARTE: '',
-      })
-    );
-    expect(typeof body.variables.FECHA).toBe('string');
-    expect(body.variables.FECHA.length).toBeGreaterThan(0);
+    expect(body.variables.NOMBRE).toBe('Gisella');
+    expect(body.variables.MONTO).toBe('100.00');
+
+    expect(body.variables.NUMERO_OPERACION).toMatch(/^NP-[0-9A-Z]+$/);
+  });
+
+  it('usa el operationNumber real si viene en los details, en vez del fallback', async () => {
+    const { sendTransactionEmail } = await import('../src/mails/mail.js');
+
+    await sendTransactionEmail(makeUser(), { ...baseDetails, operationNumber: 'OP-12345' });
+
+    const [, options] = (fetch as any).mock.calls[0];
+    expect(JSON.parse(options.body).variables.NUMERO_OPERACION).toBe('OP-12345');
+  });
+
+
+  it('deposit: usa "transaction_deposit" y arma COMISION, ORIGEN y ALIAS con sus valores', async () => {
+    const { sendTransactionEmail } = await import('../src/mails/mail.js');
+
+    await sendTransactionEmail(makeUser(), {
+      ...baseDetails,
+      fee: '5.00',
+      sourceAccount: 'Caja de ahorro ARS',
+      counterpartyAlias: 'gisella.dev',
+      counterpartyName: 'Gisella Fernández',
+    });
+
+    const [, options] = (fetch as any).mock.calls[0];
+    const body = JSON.parse(options.body);
+
+    expect(body.type).toBe('transaction_deposit');
+    expect(body.variables.MONEDA).toBe('ARS');
+    expect(body.variables.COMISION).toBe('5.00 ARS');
+    expect(body.variables.ORIGEN).toBe('Caja de ahorro ARS');
+    expect(body.variables.ALIAS).toBe('gisella.dev');
+    expect(body.variables.CONTRAPARTE).toBe('Gisella Fernández');
+  });
+
+  it('deposit sin fee: COMISION queda "Sin cargo" (fee "0.00")', async () => {
+    const { sendTransactionEmail } = await import('../src/mails/mail.js');
+
+    await sendTransactionEmail(makeUser(), { ...baseDetails, fee: '0.00' });
+
+    const [, options] = (fetch as any).mock.calls[0];
+    expect(JSON.parse(options.body).variables.COMISION).toBe('Sin cargo');
+  });
+
+  it('deposit sin ORIGEN/ALIAS/CONTRAPARTE explícitos: usa los defaults ("Saldo en X" y "—")', async () => {
+    const { sendTransactionEmail } = await import('../src/mails/mail.js');
+
+    await sendTransactionEmail(makeUser(), baseDetails);
+
+    const [, options] = (fetch as any).mock.calls[0];
+    const vars = JSON.parse(options.body).variables;
+    expect(vars.ORIGEN).toBe('Saldo en ARS');
+    expect(vars.ALIAS).toBe('—');
+    expect(vars.CONTRAPARTE).toBe('—');
   });
 
   it('usa "transaction_exchange" para type=exchange', async () => {
@@ -131,7 +176,9 @@ describe('mail.ts — sendTransactionEmail', () => {
     expect(JSON.parse(options.body).type).toBe('transaction_exchange');
   });
 
-  it('usa "transaction_sent" para type=transfer con role=sender, incluyendo la contraparte', async () => {
+
+
+  it('transfer + role=sender + status=completed (default): usa "transaction_sent"', async () => {
     const { sendTransactionEmail } = await import('../src/mails/mail.js');
 
     await sendTransactionEmail(makeUser(), {
@@ -147,21 +194,7 @@ describe('mail.ts — sendTransactionEmail', () => {
     expect(body.variables.CONTRAPARTE).toBe('Juan Pérez');
   });
 
-  it('usa "transaction_received" para type=transfer con role=receiver', async () => {
-    const { sendTransactionEmail } = await import('../src/mails/mail.js');
-
-    await sendTransactionEmail(makeUser(), {
-      ...baseDetails,
-      type: 'transfer',
-      role: 'receiver',
-      counterpartyName: 'Gisella Fernández',
-    });
-
-    const [, options] = (fetch as any).mock.calls[0];
-    expect(JSON.parse(options.body).type).toBe('transaction_received');
-  });
-
-  it('usa "transaction_sent" como fallback si type=transfer no trae role', async () => {
+  it('transfer sin role: cae a "transaction_sent" (fallback)', async () => {
     const { sendTransactionEmail } = await import('../src/mails/mail.js');
 
     await sendTransactionEmail(makeUser(), { ...baseDetails, type: 'transfer' });
@@ -169,6 +202,90 @@ describe('mail.ts — sendTransactionEmail', () => {
     const [, options] = (fetch as any).mock.calls[0];
     expect(JSON.parse(options.body).type).toBe('transaction_sent');
   });
+
+  it('transfer + role=sender + status=rejected: usa "transaction_sent_rejected" con MOTIVO_MENSAJE', async () => {
+    const { sendTransactionEmail } = await import('../src/mails/mail.js');
+
+    await sendTransactionEmail(makeUser(), {
+      ...baseDetails,
+      type: 'transfer',
+      role: 'sender',
+      status: 'rejected',
+      rejectionReason: 'Saldo insuficiente',
+      counterpartyName: 'Juan Pérez',
+    });
+
+    const [, options] = (fetch as any).mock.calls[0];
+    const body = JSON.parse(options.body);
+    expect(body.type).toBe('transaction_sent_rejected');
+    expect(body.variables.MOTIVO_MENSAJE).toBe('Saldo insuficiente');
+    expect(body.variables.CONTRAPARTE).toBe('Juan Pérez');
+    expect(body.variables.MONEDA).toBe('ARS');
+  });
+
+  it('transaction_sent_rejected sin rejectionReason: usa el mensaje genérico por defecto', async () => {
+    const { sendTransactionEmail } = await import('../src/mails/mail.js');
+
+    await sendTransactionEmail(makeUser(), {
+      ...baseDetails,
+      type: 'transfer',
+      role: 'sender',
+      status: 'rejected',
+    });
+
+    const [, options] = (fetch as any).mock.calls[0];
+    expect(JSON.parse(options.body).variables.MOTIVO_MENSAJE).toBe(
+      'Tuvimos un problema técnico y no pudimos completar la transferencia.'
+    );
+  });
+
+  it('transfer + role=receiver: usa "transaction_received" con DESTINO y MONEDA de destino', async () => {
+    const { sendTransactionEmail } = await import('../src/mails/mail.js');
+
+    await sendTransactionEmail(makeUser(), {
+      ...baseDetails,
+      type: 'transfer',
+      role: 'receiver',
+      currencyDestination: 'USD',
+      destinationAccount: 'Caja de ahorro USD',
+      counterpartyName: 'Gisella Fernández',
+    });
+
+    const [, options] = (fetch as any).mock.calls[0];
+    const body = JSON.parse(options.body);
+    expect(body.type).toBe('transaction_received');
+    expect(body.variables.MONEDA).toBe('USD');
+    expect(body.variables.DESTINO).toBe('Caja de ahorro USD');
+    expect(body.variables.CONTRAPARTE).toBe('Gisella Fernández');
+  });
+
+  it('transaction_received sin destinationAccount: cae al default "Saldo en X"', async () => {
+    const { sendTransactionEmail } = await import('../src/mails/mail.js');
+
+    await sendTransactionEmail(makeUser(), {
+      ...baseDetails,
+      type: 'transfer',
+      role: 'receiver',
+      currencyDestination: 'BRL',
+    });
+
+    const [, options] = (fetch as any).mock.calls[0];
+    expect(JSON.parse(options.body).variables.DESTINO).toBe('Saldo en BRL');
+  });
+
+
+
+  it('FECHA viene formateada como string no vacío', async () => {
+    const { sendTransactionEmail } = await import('../src/mails/mail.js');
+
+    await sendTransactionEmail(makeUser(), baseDetails);
+
+    const [, options] = (fetch as any).mock.calls[0];
+    const vars = JSON.parse(options.body).variables;
+    expect(typeof vars.FECHA).toBe('string');
+    expect(vars.FECHA.length).toBeGreaterThan(0);
+  });
+
 
   it('loguea error pero no tira excepción si el servicio de mail responde con error', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }));
