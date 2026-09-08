@@ -1,9 +1,9 @@
-// services/contact.service.ts
+
 import { Op } from 'sequelize';
 import { Transaction } from '../models/transaction.model.js';
 import { Wallet } from '../models/wallet.model.js';
 import { User } from '../models/users.model.js';
-import { NotFoundError } from '../errors/app-error.js';
+import { NotFoundError, ValidationError } from '../errors/app-error.js';
 
 export interface FrequentContact {
     id: number;
@@ -21,7 +21,7 @@ export async function getFrequentContacts(userId: number): Promise<FrequentConta
         throw new NotFoundError('Este usuario no tiene una wallet asociada.');
     }
 
-    // 1. Buscamos todas las transferencias donde participamos
+  
     const transfers = await Transaction.findAll({
         where: {
             type: 'transfer',
@@ -31,9 +31,9 @@ export async function getFrequentContacts(userId: number): Promise<FrequentConta
         attributes: ['senderWalletId', 'receiverWalletId'],
     });
 
-    if (transfers.length === 0) return []; // Retorna vacío si no hay transacciones
+    if (transfers.length === 0) return []; 
 
-    // 2. Contamos cuántas interacciones tuvimos con cada "otra wallet"
+   
     const frequencyMap: Record<number, number> = {};
 
     for (const t of transfers) {
@@ -43,31 +43,28 @@ export async function getFrequentContacts(userId: number): Promise<FrequentConta
         }
     }
 
-    // 3. Ordenamos por cantidad de interacciones (mayor a menor) y sacamos los 3 primeros IDs
-    const topWalletIds = Object.entries(frequencyMap)
+     const topWalletIds = Object.entries(frequencyMap)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 3)
         .map(entry => Number(entry[0]));
 
     if (topWalletIds.length === 0) return [];
 
-    // 4. Buscamos esas 3 wallets en la BD
+    
     const topWallets = await Wallet.findAll({
         where: { id: { [Op.in]: topWalletIds } },
     });
 
     const userIds = topWallets.map(w => w.userId);
 
-    // 5. Buscamos los datos de los usuarios (Sequelize ignora automáticamente a los que hicimos Soft Delete)
-    const topUsers = await User.findAll({
+     const topUsers = await User.findAll({
         where: { id: { [Op.in]: userIds } },
         attributes: ['id', 'alias', 'cbu', 'name', 'surname', 'profilePictureUrl'],
     });
 
-    // 6. Juntamos la info del usuario con su conteo de interacciones
-    const result: FrequentContact[] = topWallets.map(wallet => {
+     const result: FrequentContact[] = topWallets.map(wallet => {
         const user = topUsers.find(u => u.id === wallet.userId);
-        if (!user) return null; // Si fue eliminado lógicamente, lo omitimos
+        if (!user) return null; 
 
         return {
             id: user.id,
@@ -80,6 +77,43 @@ export async function getFrequentContacts(userId: number): Promise<FrequentConta
         };
     }).filter(contact => contact !== null) as FrequentContact[];
 
-    // Ordenamos el array final para que queden de mayor a menor interacción
-    return result.sort((a, b) => b.interactionCount - a.interactionCount);
+     return result.sort((a, b) => b.interactionCount - a.interactionCount);
+}
+
+export interface ContactLookupResult {
+    alias: string | null;
+    cbu: string | null;
+    name: string;
+    surname: string;
+    profilePictureUrl: string | null;
+    isSelf: boolean;
+}
+
+
+export async function lookupContactByAliasOrCbu(userId: number, aliasOrCbu: string): Promise<ContactLookupResult> {
+    const query = (aliasOrCbu ?? '').trim();
+
+    if (!query) {
+        throw new ValidationError('Debés indicar un alias o CBU para buscar.');
+    }
+
+    const user = await User.findOne({
+        where: {
+            [Op.or]: [{ alias: query }, { cbu: query }],
+        },
+        attributes: ['id', 'alias', 'cbu', 'name', 'surname', 'profilePictureUrl'],
+    });
+
+    if (!user) {
+        throw new NotFoundError('No se encontró ningún usuario con ese alias o CBU.');
+    }
+
+    return {
+        alias: user.alias || null,
+        cbu: user.cbu || null,
+        name: user.name,
+        surname: user.surname,
+        profilePictureUrl: user.profilePictureUrl || null,
+        isSelf: user.id === userId,
+    };
 }

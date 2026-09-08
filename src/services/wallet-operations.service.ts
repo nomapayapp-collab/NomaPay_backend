@@ -1,4 +1,3 @@
-
 import sequelize from '../db.js';
 import { Wallet } from '../models/wallet.model.js';
 import { Balance } from '../models/balance.model.js';
@@ -47,15 +46,21 @@ export interface ConversionMath {
 }
 
 export function calculateConversion(
-    amount: number,
-    rate: number,
-    feePercentage: number = TRANSACTION_FEE_PERCENTAGE
+  amount: number,
+  rate: number,
+  feePercentage: number = TRANSACTION_FEE_PERCENTAGE
 ): ConversionMath {
-    const fee = (amount * feePercentage) / 100;
-    const totalDebit = amount + fee;
-    const destinationAmount = amount / rate;
-    return { fee, totalDebit, destinationAmount };
+  const fee = (amount * feePercentage) / 100;
+
+  const totalDebit = amount; 
+
+  const amountToConvert = amount - fee;
+
+  const destinationAmount = amountToConvert / rate;
+
+  return { fee, totalDebit, destinationAmount };
 }
+
 
 export async function assertActiveCurrency(code: string): Promise<Currency> {
     const currency = await Currency.findOne({ where: { code } });
