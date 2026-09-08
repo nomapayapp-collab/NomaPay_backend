@@ -681,6 +681,48 @@ export const swaggerSpec = {
             }
         },
 
+        "/contacts/lookup": {
+            get: {
+                tags: ["Transfers"],
+                summary: "Buscar un usuario por alias o CBU (verificación en vivo)",
+                description: "Busca un usuario por alias o CBU exacto para mostrar su nombre antes de confirmar una transferencia, igual que en Mercado Pago/Brubank. Pensado para llamarse mientras el usuario escribe (con debounce en el frontend), no recién al confirmar el envío.",
+                security: [{ cookieAuth: [] }],
+                parameters: [
+                    {
+                        name: "alias",
+                        in: "query",
+                        required: true,
+                        schema: { type: "string" },
+                        description: "Alias o CBU a buscar (coincidencia exacta).",
+                        example: "gisella.massiero"
+                    }
+                ],
+                responses: {
+                    "200": {
+                        description: "Usuario encontrado",
+                        content: {
+                            "application/json": {
+                                schema: {
+                                    type: "object",
+                                    properties: {
+                                        alias: { type: "string", nullable: true, example: "maria.gomez" },
+                                        cbu: { type: "string", nullable: true, example: "0000003100012345678902" },
+                                        name: { type: "string", example: "María" },
+                                        surname: { type: "string", example: "Gómez" },
+                                        profilePictureUrl: { type: "string", nullable: true },
+                                        isSelf: { type: "boolean", example: false, description: "true si el alias/CBU pertenece al propio usuario autenticado." }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": errorResponse("Falta el parámetro alias"),
+                    "401": errorResponse("No autenticado"),
+                    "404": errorResponse("No se encontró ningún usuario con ese alias o CBU"),
+                }
+            }
+        },
+
         "/chatbot/message": {
             post: {
                 tags: ["Chatbot"],

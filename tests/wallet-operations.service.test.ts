@@ -75,8 +75,8 @@ describe('wallet-operations.service — funciones puras', () => {
   it('calculateConversion calcula fee, débito total y monto a acreditar', () => {
     const result = calculateConversion(1000, 10, 1); // 1% de comisión
     expect(result.fee).toBeCloseTo(10);
-    expect(result.totalDebit).toBeCloseTo(1010);
-    expect(result.destinationAmount).toBeCloseTo(100);
+    expect(result.totalDebit).toBeCloseTo(1000);
+    expect(result.destinationAmount).toBeCloseTo(99);
   });
 
   it('round2 redondea correctamente a 2 decimales', () => {
@@ -107,7 +107,7 @@ describe('wallet-operations.service — exchangeCurrency (integración con mocks
     );
   });
 
-  it('ARS -> USD debita ARS + fee, acredita USD, crea la transacción como "exchange" y envía el email', async () => {
+  it('ARS -> USD debita ARS exactos, resta fee al convertido, acredita USD, crea la transacción como "exchange" y envía el email', async () => {
     const originBalance = makeBalance('200000');
     const destinationBalance = makeBalance('0');
 
@@ -117,13 +117,13 @@ describe('wallet-operations.service — exchangeCurrency (integración con mocks
 
     const result = await exchangeCurrency(42, { fromCurrency: 'ARS', toCurrency: 'USD', amount: 130000 });
 
-    // fee = 130000 * 0.5% = 650 ; totalDebit = 130650 ; destinationAmount = 130000/1300 = 100
+    // fee = 130000 * 0.5% = 650 ; totalDebit = 130000 ; destinationAmount = 129350/1300 = 99.5
     expect(originBalance.update).toHaveBeenCalledWith(
-      expect.objectContaining({ amount: (200000 - 130650).toFixed(8) }),
+      expect.objectContaining({ amount: (200000 - 130000).toFixed(8) }),
       expect.anything()
     );
     expect(destinationBalance.update).toHaveBeenCalledWith(
-      expect.objectContaining({ amount: (100).toFixed(8) }),
+      expect.objectContaining({ amount: (99.5).toFixed(8) }),
       expect.anything()
     );
 
@@ -132,7 +132,7 @@ describe('wallet-operations.service — exchangeCurrency (integración con mocks
         type: 'exchange',
         currencyOrigin: 'ARS',
         currencyDestination: 'USD',
-        finalAmount: '100.00',
+        finalAmount: '99.50',
       }),
       expect.anything()
     );
@@ -141,7 +141,7 @@ describe('wallet-operations.service — exchangeCurrency (integración con mocks
     expect(mockTransaction.rollback).not.toHaveBeenCalled();
     expect(sendTransactionEmail).toHaveBeenCalledTimes(1);
     expect(result.transaction.type).toBe('exchange');
-    expect(result.transaction.finalAmount).toBe('100.00');
+    expect(result.transaction.finalAmount).toBe('99.50');
   });
 
   it('cualquier par sin ARS (ej. USD -> BRL) también se registra como "exchange"', async () => {
@@ -233,7 +233,7 @@ describe('wallet-operations.service — exchangeCurrency (integración con mocks
         ...data,
         amount: '130000.00000000',
         fee: '650.00000000',
-        finalAmount: '100.00000000',
+        finalAmount: '99.50000000',
         exchangeRate: '1300.00000000',
         transactionDate: new Date('2026-01-01T00:00:00Z'),
       })
@@ -243,7 +243,7 @@ describe('wallet-operations.service — exchangeCurrency (integración con mocks
 
     expect(result.transaction.amount).toBe('130000.00');
     expect(result.transaction.fee).toBe('650.00');
-    expect(result.transaction.finalAmount).toBe('100.00');
+    expect(result.transaction.finalAmount).toBe('99.50');
   });
 
   it('formatea exchangeRate con 4 decimales en la respuesta', async () => {
