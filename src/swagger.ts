@@ -280,6 +280,53 @@ export const swaggerSpec = {
                 },
             },
         },
+        "/auth/forgot-password": {
+            post: {
+                summary: "Solicitar recuperación de contraseña",
+                tags: ["Auth"],
+                requestBody: {
+                    required: true,
+                    content: {
+                        "application/json": {
+                            schema: {
+                                type: "object",
+                                properties: {
+                                    email: { type: "string" }
+                                }
+                            }
+                        }
+                    }
+                },
+                responses: {
+                    200: { description: "Email de recuperación enviado (si existe)" }
+                }
+            }
+        },
+        "/auth/reset-password": {
+            post: {
+                summary: "Cambiar contraseña usando el token",
+                tags: ["Auth"],
+                requestBody: {
+                    required: true,
+                    content: {
+                        "application/json": {
+                            schema: {
+                                type: "object",
+                                properties: {
+                                    token: { type: "string" },
+                                    newPassword: { type: "string" }
+                                }
+                            }
+                        }
+                    }
+                },
+                responses: {
+                    200: { description: "Contraseña actualizada" },
+                    400: { description: "Token inválido o expirado" }
+                }
+            }
+        },
+
         "/auth/refresh": {
             post: {
                 tags: ["Auth"],
