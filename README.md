@@ -47,18 +47,35 @@ Backend de **NomaPay**, una billetera digital multi-moneda simulada (sin dinero 
 
 src/
 controllers/ # recibe el request, valida el input mínimo y llama al service correspondiente
+
 services/ # lógica de negocio: acá vive el "qué hace" cada operación
+
 models/ # definición de las tablas con Sequelize
+
 routes/ # mapeo de endpoints a controllers
+
 middlewares/ # auth (verificación de JWT), validación de inputs
+
 errors/ # clases de error propias (AppError, ValidationError, ConflictError, NotFoundError)
+
 mails/ # envío de emails (bienvenida, transacciones, contraseñas) vía microservicio de notificaciones
+
 api-calls/ # helper genérico de fetch con timeout, usado por las integraciones externas (tasas de cambio)
-helpers/ # utilidades varias
+
+utils/ # funciones utilitarias y helpers (ej. formateo y redondeo de dinero)
+
+app.ts #  configuración principal de Express (middlewares, rutas globales, manejo de errores)
+
+db.ts # configuración de la conexión a PostgreSQL usando Sequelize
+
 swagger.ts # especificación completa de la API
+
 db/
+
 schema.sql # estructura completa de la base de datos
+
 migrations/ # cambios incrementales sobre schema.sql (ver más abajo)
+
 seed.sql # datos de prueba
 
 
