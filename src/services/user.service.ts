@@ -4,6 +4,7 @@ import { User } from '../models/users.model.js';
 import { ConflictError, NotFoundError, ValidationError } from '../errors/app-error.js';
 import { Wallet } from '../models/wallet.model.js';
 import { Balance } from '../models/balance.model.js';
+import { sendAccountDeletionEmail } from '../mails/mail.js';
 
 export interface UserProfile {
   id: number;
@@ -136,6 +137,27 @@ export async function deleteUserAccount(userId: number): Promise<void> {
       throw new ValidationError('No podés eliminar tu cuenta porque tenés saldo a favor. Transferilo o cambialo antes de darte de baja.');
     }
   }
+
+  const deletedAt = new Date();
+  const reactivationDeadline = new Date(deletedAt);
+  reactivationDeadline.setDate(reactivationDeadline.getDate() + 30);
+
+  const ticketId = `DEL-${user.id}-${Date.now().toString(36).toUpperCase()}`;
+  const baseUrl = process.env.MAIL_SERVICE_URL || '';
+  const reactivationLink = `${baseUrl}/reactivate?ticket=${ticketId}`;
+
+  try {
+    await sendAccountDeletionEmail(user, {
+      deletedAt,
+      finalBalance: '$0.00',
+      ticketId,
+      reactivationDeadline,
+      reactivationLink,
+    });
+  } catch (emailErr) {
+    console.error('❌ Error enviando email de eliminación de cuenta:', emailErr);
+  }
+
 
   await user.update({
     email: `deleted_${user.id}_${user.email}`,
