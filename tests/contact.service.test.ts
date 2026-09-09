@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Op } from 'sequelize';
+import { Op, type WhereOptions } from 'sequelize';
+import type { User as UserModel } from '../src/models/users.model.js';
+import type { Wallet as WalletModel } from '../src/models/wallet.model.js';
+import type { Transaction as TransactionModel } from '../src/models/transaction.model.js';
 
 vi.mock('../src/models/wallet.model.js', () => ({
   Wallet: { findOne: vi.fn(), findAll: vi.fn() },
@@ -22,13 +25,30 @@ const { getFrequentContacts, lookupContactByAliasOrCbu } = await import('../src/
 const USER_ID = 1;
 const MY_WALLET = { id: 10, userId: USER_ID };
 
+
+function asUser(partial: Record<string, unknown>): UserModel {
+  return partial as unknown as UserModel;
+}
+function asUsers(partials: Record<string, unknown>[]): UserModel[] {
+  return partials as unknown as UserModel[];
+}
+function asWallet(partial: Record<string, unknown>): WalletModel {
+  return partial as unknown as WalletModel;
+}
+function asWallets(partials: Record<string, unknown>[]): WalletModel[] {
+  return partials as unknown as WalletModel[];
+}
+function asTransactions(partials: Record<string, unknown>[]): TransactionModel[] {
+  return partials as unknown as TransactionModel[];
+}
+
 describe('contact.service — getFrequentContacts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('lanza NotFoundError si el usuario no tiene una wallet asociada', async () => {
-    (Wallet.findOne as any).mockResolvedValue(null);
+    vi.mocked(Wallet.findOne).mockResolvedValue(null);
 
     await expect(getFrequentContacts(USER_ID)).rejects.toThrow(
       'Este usuario no tiene una wallet asociada.'
@@ -36,8 +56,8 @@ describe('contact.service — getFrequentContacts', () => {
   });
 
   it('retorna un array vacío si el usuario no tiene transferencias', async () => {
-    (Wallet.findOne as any).mockResolvedValue(MY_WALLET);
-    (Transaction.findAll as any).mockResolvedValue([]);
+    vi.mocked(Wallet.findOne).mockResolvedValue(asWallet(MY_WALLET));
+    vi.mocked(Transaction.findAll).mockResolvedValue(asTransactions([]));
 
     const result = await getFrequentContacts(USER_ID);
 
@@ -47,10 +67,9 @@ describe('contact.service — getFrequentContacts', () => {
   });
 
   it('devuelve hasta 3 contactos frecuentes ordenados de mayor a menor cantidad de interacciones', async () => {
-    (Wallet.findOne as any).mockResolvedValue(MY_WALLET);
+    vi.mocked(Wallet.findOne).mockResolvedValue(asWallet(MY_WALLET));
 
-
-    (Transaction.findAll as any).mockResolvedValue([
+    vi.mocked(Transaction.findAll).mockResolvedValue(asTransactions([
       { senderWalletId: MY_WALLET.id, receiverWalletId: 20 },
       { senderWalletId: MY_WALLET.id, receiverWalletId: 20 },
       { senderWalletId: 20, receiverWalletId: MY_WALLET.id },
@@ -58,19 +77,19 @@ describe('contact.service — getFrequentContacts', () => {
       { senderWalletId: 30, receiverWalletId: MY_WALLET.id },
       { senderWalletId: MY_WALLET.id, receiverWalletId: 40 },
       { senderWalletId: MY_WALLET.id, receiverWalletId: 50 },
-    ]);
+    ]));
 
-    (Wallet.findAll as any).mockResolvedValue([
+    vi.mocked(Wallet.findAll).mockResolvedValue(asWallets([
       { id: 20, userId: 2 },
       { id: 30, userId: 3 },
       { id: 40, userId: 4 },
-    ]);
+    ]));
 
-    (User.findAll as any).mockResolvedValue([
+    vi.mocked(User.findAll).mockResolvedValue(asUsers([
       { id: 2, alias: 'maria.gomez', cbu: '000222', name: 'María', surname: 'Gómez', profilePictureUrl: 'https://img.com/maria.png' },
       { id: 3, alias: 'juan.perez', cbu: null, name: 'Juan', surname: 'Pérez', profilePictureUrl: null },
       { id: 4, alias: null, cbu: '000444', name: 'Carlos', surname: 'López', profilePictureUrl: null },
-    ]);
+    ]));
 
     const result = await getFrequentContacts(USER_ID);
 
@@ -105,21 +124,20 @@ describe('contact.service — getFrequentContacts', () => {
   });
 
   it('omite contactos cuyo usuario no fue encontrado (ej. eliminado)', async () => {
-    (Wallet.findOne as any).mockResolvedValue(MY_WALLET);
-    (Transaction.findAll as any).mockResolvedValue([
+    vi.mocked(Wallet.findOne).mockResolvedValue(asWallet(MY_WALLET));
+    vi.mocked(Transaction.findAll).mockResolvedValue(asTransactions([
       { senderWalletId: MY_WALLET.id, receiverWalletId: 20 },
       { senderWalletId: MY_WALLET.id, receiverWalletId: 30 },
-    ]);
+    ]));
 
-    (Wallet.findAll as any).mockResolvedValue([
+    vi.mocked(Wallet.findAll).mockResolvedValue(asWallets([
       { id: 20, userId: 2 },
       { id: 30, userId: 3 },
-    ]);
+    ]));
 
-   
-    (User.findAll as any).mockResolvedValue([
+    vi.mocked(User.findAll).mockResolvedValue(asUsers([
       { id: 2, alias: 'maria.gomez', cbu: '000222', name: 'María', surname: 'Gómez', profilePictureUrl: null },
-    ]);
+    ]));
 
     const result = await getFrequentContacts(USER_ID);
 
@@ -148,7 +166,7 @@ describe('contact.service — lookupContactByAliasOrCbu', () => {
   });
 
   it('lanza NotFoundError si no existe ningún usuario con ese alias o CBU', async () => {
-    (User.findOne as any).mockResolvedValue(null);
+    vi.mocked(User.findOne).mockResolvedValue(null);
 
     await expect(lookupContactByAliasOrCbu(USER_ID, 'no.existe')).rejects.toThrow(
       'No se encontró ningún usuario con ese alias o CBU.'
@@ -156,14 +174,14 @@ describe('contact.service — lookupContactByAliasOrCbu', () => {
   });
 
   it('devuelve los datos del contacto cuando el alias existe', async () => {
-    (User.findOne as any).mockResolvedValue({
+    vi.mocked(User.findOne).mockResolvedValue(asUser({
       id: 2,
       alias: 'maria.gomez',
       cbu: '0000003100012345678902',
       name: 'María',
       surname: 'Gómez',
       profilePictureUrl: 'https://img.com/maria.png',
-    });
+    }));
 
     const result = await lookupContactByAliasOrCbu(USER_ID, 'maria.gomez');
 
@@ -178,14 +196,14 @@ describe('contact.service — lookupContactByAliasOrCbu', () => {
   });
 
   it('busca también por CBU y no solo por alias', async () => {
-    (User.findOne as any).mockResolvedValue({
+    vi.mocked(User.findOne).mockResolvedValue(asUser({
       id: 3,
       alias: null,
       cbu: '0000003100012345678902',
       name: 'Juan',
       surname: 'Pérez',
       profilePictureUrl: null,
-    });
+    }));
 
     const result = await lookupContactByAliasOrCbu(USER_ID, '0000003100012345678902');
 
@@ -194,31 +212,33 @@ describe('contact.service — lookupContactByAliasOrCbu', () => {
   });
 
   it('recorta espacios del alias/cbu antes de buscar', async () => {
-    (User.findOne as any).mockResolvedValue({
+    vi.mocked(User.findOne).mockResolvedValue(asUser({
       id: 2,
       alias: 'maria.gomez',
       cbu: null,
       name: 'María',
       surname: 'Gómez',
       profilePictureUrl: null,
-    });
+    }));
 
     await lookupContactByAliasOrCbu(USER_ID, '  maria.gomez  ');
 
-    const [{ where }] = (User.findOne as any).mock.calls[0];
-    const orConditions = where[Op.or];
+    const call = vi.mocked(User.findOne).mock.calls[0];
+    const options = call?.[0];
+    const where = options?.where as WhereOptions<UserModel> | undefined;
+    const orConditions = (where as unknown as Record<symbol, unknown> | undefined)?.[Op.or];
     expect(orConditions).toEqual([{ alias: 'maria.gomez' }, { cbu: 'maria.gomez' }]);
   });
 
   it('marca isSelf en true si el usuario se busca a sí mismo', async () => {
-    (User.findOne as any).mockResolvedValue({
+    vi.mocked(User.findOne).mockResolvedValue(asUser({
       id: USER_ID,
       alias: 'yo.mismo',
       cbu: null,
       name: 'Gisella',
       surname: 'Dev',
       profilePictureUrl: null,
-    });
+    }));
 
     const result = await lookupContactByAliasOrCbu(USER_ID, 'yo.mismo');
 

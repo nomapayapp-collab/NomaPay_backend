@@ -1,5 +1,7 @@
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { Wallet as WalletModel } from '../src/models/wallet.model.js';
+import type { Transaction as TransactionModel } from '../src/models/transaction.model.js';
+import type { User as UserModel } from '../src/models/users.model.js';
 
 vi.mock('../src/models/wallet.model.js', () => ({
     Wallet: { findOne: vi.fn(), findAll: vi.fn() },
@@ -22,13 +24,26 @@ const { getUserHistory } = await import('../src/services/history.service.js');
 const USER_ID = 1;
 const MY_WALLET = { id: 10, userId: USER_ID };
 
+function asWallet(partial: Record<string, unknown>): WalletModel {
+    return partial as unknown as WalletModel;
+}
+function asWallets(partials: Record<string, unknown>[]): WalletModel[] {
+    return partials as unknown as WalletModel[];
+}
+function asTransactions(partials: Record<string, unknown>[]): TransactionModel[] {
+    return partials as unknown as TransactionModel[];
+}
+function asUsers(partials: Record<string, unknown>[]): UserModel[] {
+    return partials as unknown as UserModel[];
+}
+
 describe('history.service — getUserHistory', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
 
     it('lanza NotFoundError si el usuario no tiene una wallet asociada', async () => {
-        (Wallet.findOne as any).mockResolvedValue(null);
+        vi.mocked(Wallet.findOne).mockResolvedValue(null);
 
         await expect(getUserHistory(USER_ID)).rejects.toThrow(
             'El usuario no tiene una wallet asociada.'
@@ -36,8 +51,8 @@ describe('history.service — getUserHistory', () => {
     });
 
     it('retorna array vacío si el usuario no tiene movimientos', async () => {
-        (Wallet.findOne as any).mockResolvedValue(MY_WALLET);
-        (Transaction.findAll as any).mockResolvedValue([]);
+        vi.mocked(Wallet.findOne).mockResolvedValue(asWallet(MY_WALLET));
+        vi.mocked(Transaction.findAll).mockResolvedValue(asTransactions([]));
 
         const history = await getUserHistory(USER_ID);
 
@@ -45,8 +60,8 @@ describe('history.service — getUserHistory', () => {
     });
 
     it('mapea depósitos a "carga" con su fee y sin contraparte', async () => {
-        (Wallet.findOne as any).mockResolvedValue(MY_WALLET);
-        (Transaction.findAll as any).mockResolvedValue([
+        vi.mocked(Wallet.findOne).mockResolvedValue(asWallet(MY_WALLET));
+        vi.mocked(Transaction.findAll).mockResolvedValue(asTransactions([
             {
                 id: 101,
                 type: 'deposit',
@@ -57,7 +72,7 @@ describe('history.service — getUserHistory', () => {
                 currencyOrigin: 'ARS',
                 message: null,
             },
-        ]);
+        ]));
 
         const history = await getUserHistory(USER_ID);
 
@@ -75,8 +90,8 @@ describe('history.service — getUserHistory', () => {
     });
 
     it('mapea exchange a "cambio" con exchangeData', async () => {
-        (Wallet.findOne as any).mockResolvedValue(MY_WALLET);
-        (Transaction.findAll as any).mockResolvedValue([
+        vi.mocked(Wallet.findOne).mockResolvedValue(asWallet(MY_WALLET));
+        vi.mocked(Transaction.findAll).mockResolvedValue(asTransactions([
             {
                 id: 102,
                 type: 'exchange',
@@ -89,7 +104,7 @@ describe('history.service — getUserHistory', () => {
                 finalAmount: '100.00000000',
                 message: null,
             },
-        ]);
+        ]));
 
         const history = await getUserHistory(USER_ID);
 
@@ -112,10 +127,10 @@ describe('history.service — getUserHistory', () => {
     });
 
     it('mapea transferencias enviadas como "pago" y recibidas como "cobro" con su counterparty y message', async () => {
-        (Wallet.findOne as any).mockResolvedValue(MY_WALLET);
+        vi.mocked(Wallet.findOne).mockResolvedValue(asWallet(MY_WALLET));
 
-        // 1 envío a Wallet 20 y 1 cobro desde Wallet 30
-        (Transaction.findAll as any).mockResolvedValue([
+
+        vi.mocked(Transaction.findAll).mockResolvedValue(asTransactions([
             {
                 id: 103,
                 type: 'transfer',
@@ -140,23 +155,23 @@ describe('history.service — getUserHistory', () => {
                 currencyOrigin: 'ARS',
                 message: null,
             },
-        ]);
+        ]));
 
-        (Wallet.findAll as any).mockResolvedValue([
+        vi.mocked(Wallet.findAll).mockResolvedValue(asWallets([
             { id: 20, userId: 2 },
             { id: 30, userId: 3 },
-        ]);
+        ]));
 
-        (User.findAll as any).mockResolvedValue([
+        vi.mocked(User.findAll).mockResolvedValue(asUsers([
             { id: 2, name: 'María', surname: 'Gómez', alias: 'maria.gomez' },
             { id: 3, name: 'Juan', surname: 'Pérez', alias: 'juan.perez' },
-        ]);
+        ]));
 
         const history = await getUserHistory(USER_ID);
 
         expect(history).toHaveLength(2);
 
-        // Pago
+
         expect(history[0]).toEqual({
             id: 103,
             operationType: 'pago',
@@ -172,7 +187,7 @@ describe('history.service — getUserHistory', () => {
             },
         });
 
-        // Cobro
+
         expect(history[1]).toEqual({
             id: 104,
             operationType: 'cobro',

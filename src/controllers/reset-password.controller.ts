@@ -15,7 +15,7 @@ export async function forgotPasswordHandler(req: Request, res: Response) {
         return res.status(200).json({
             message: 'Si el email existe en nuestro sistema, te enviaremos un link para recuperar la contraseña.'
         });
-    } catch (err: any) {
+    } catch (err: unknown) {
         if (err instanceof AppError) {
             return res.status(err.statusCode).json({ error: err.message });
         }
@@ -39,7 +39,7 @@ export async function resetPasswordHandler(req: Request, res: Response) {
         await resetPassword(token, newPassword);
 
         return res.status(200).json({ message: 'Contraseña actualizada correctamente.' });
-    } catch (err: any) {
+    } catch (err: unknown) {
         if (err instanceof AppError) {
             return res.status(err.statusCode).json({ error: err.message });
         }

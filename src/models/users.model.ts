@@ -2,7 +2,7 @@ import { DataTypes, Model } from 'sequelize'
 import type { Optional } from 'sequelize';
 import sequelize from '../db.js';
 
-// Atributos de la tabla
+
 interface UserAttributes {
   id: number;
   name: string;

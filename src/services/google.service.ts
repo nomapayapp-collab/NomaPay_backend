@@ -1,5 +1,5 @@
-
 import { OAuth2Client } from 'google-auth-library';
+import { UniqueConstraintError } from 'sequelize';
 import sequelize from '../db.js';
 import { User } from '../models/users.model.js';
 import { Wallet } from '../models/wallet.model.js';
@@ -109,11 +109,11 @@ export async function registerWithGoogle(idToken: string): Promise<AuthResult> {
 
     const { accessToken, refreshToken } = await issueTokenPair(newUser.id, newUser.email);
     return { accessToken, refreshToken, user: toResult(newUser) };
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (!committed) {
       await t.rollback();
     }
-    if (err.name === 'SequelizeUniqueConstraintError') {
+    if (err instanceof UniqueConstraintError) {
       const field = err.errors?.[0]?.path;
       throw new ConflictError(`Ya existe una cuenta con ese ${field === 'email' ? 'email' : 'dato'}.`);
     }

@@ -1,4 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import type { Wallet as WalletModel } from '../src/models/wallet.model.js';
+import type { Balance as BalanceModel } from '../src/models/balance.model.js';
+import type { Transaction as TransactionModel } from '../src/models/transaction.model.js';
+import type { Currency as CurrencyModel } from '../src/models/currency.model.js';
 
 const mockTransaction = {
   LOCK: { UPDATE: 'UPDATE' },
@@ -49,18 +53,38 @@ const { Balance } = await import('../src/models/balance.model.js');
 const { Transaction } = await import('../src/models/transaction.model.js');
 const { assertActiveCurrency } = await import('../src/services/wallet-operations.service.js');
 const { sendTransactionEmail } = await import('../src/mails/mail.js');
-const { getWalletSummary } = await import('../src/services/wallet.service.js');
 
 const { depositFunds, DEPOSIT_LIMITS, DEFAULT_MAX_DEPOSIT_AMOUNT } = await import('../src/services/deposit.service.js');
 
-function makeBalance(amount: string) {
-  return {
+/** Instancia "falsa" de Balance para los tests: solo lo mínimo que el service toca. */
+interface FakeBalance {
+  amount: string;
+  update: Mock;
+}
+
+function makeBalance(amount: string): FakeBalance {
+  const balance: FakeBalance = {
     amount,
-    update: vi.fn().mockImplementation(function (this: any, values: any) {
-      Object.assign(this, values);
-      return Promise.resolve(this);
-    }),
+    update: vi.fn(),
   };
+  balance.update.mockImplementation((values: Partial<FakeBalance>) => {
+    Object.assign(balance, values);
+    return Promise.resolve(balance);
+  });
+  return balance;
+}
+
+function asWallet(partial: Record<string, unknown>): WalletModel {
+  return partial as unknown as WalletModel;
+}
+function asBalance(partial: FakeBalance): BalanceModel {
+  return partial as unknown as BalanceModel;
+}
+function asCurrency(partial: Record<string, unknown>): CurrencyModel {
+  return partial as unknown as CurrencyModel;
+}
+function asTransaction(partial: Record<string, unknown>): TransactionModel {
+  return partial as unknown as TransactionModel;
 }
 
 describe('deposit.service — depositFunds', () => {
@@ -69,10 +93,10 @@ describe('deposit.service — depositFunds', () => {
     mockTransaction.commit.mockReset();
     mockTransaction.rollback.mockReset();
 
-    (assertActiveCurrency as any).mockResolvedValue({ code: 'ARS', isActive: true });
-    (Wallet.findOne as any).mockResolvedValue({ id: 1, userId: 42 });
-    (Transaction.create as any).mockImplementation((data: any) =>
-      Promise.resolve({ id: 99, ...data, transactionDate: new Date('2026-01-01T00:00:00Z') })
+    vi.mocked(assertActiveCurrency).mockResolvedValue(asCurrency({ code: 'ARS', isActive: true }));
+    vi.mocked(Wallet.findOne).mockResolvedValue(asWallet({ id: 1, userId: 42 }));
+    vi.mocked(Transaction.create).mockImplementation((data) =>
+      Promise.resolve(asTransaction({ id: 99, ...data, transactionDate: new Date('2026-01-01T00:00:00Z') }))
     );
   });
 
@@ -94,7 +118,7 @@ describe('deposit.service — depositFunds', () => {
 
   it('acepta un monto exactamente igual al límite de ARS', async () => {
     const balance = makeBalance('0');
-    (Balance.findOne as any).mockResolvedValue(balance);
+    vi.mocked(Balance.findOne).mockResolvedValue(asBalance(balance));
 
     await expect(
       depositFunds(42, { currencyCode: 'ARS', amount: DEPOSIT_LIMITS.ARS })
@@ -109,7 +133,7 @@ describe('deposit.service — depositFunds', () => {
 
   it('acepta un monto exactamente igual al límite de USD', async () => {
     const balance = makeBalance('0');
-    (Balance.findOne as any).mockResolvedValue(balance);
+    vi.mocked(Balance.findOne).mockResolvedValue(asBalance(balance));
 
     await expect(
       depositFunds(42, { currencyCode: 'USD', amount: DEPOSIT_LIMITS.USD })
@@ -124,7 +148,7 @@ describe('deposit.service — depositFunds', () => {
 
   it('acepta un monto exactamente igual al límite de BRL', async () => {
     const balance = makeBalance('0');
-    (Balance.findOne as any).mockResolvedValue(balance);
+    vi.mocked(Balance.findOne).mockResolvedValue(asBalance(balance));
 
     await expect(
       depositFunds(42, { currencyCode: 'BRL', amount: DEPOSIT_LIMITS.BRL })
@@ -138,7 +162,7 @@ describe('deposit.service — depositFunds', () => {
   });
 
   it('propaga el error de assertActiveCurrency si la moneda no está activa', async () => {
-    (assertActiveCurrency as any).mockRejectedValue(new Error('La moneda "XYZ" no está disponible.'));
+    vi.mocked(assertActiveCurrency).mockRejectedValue(new Error('La moneda "XYZ" no está disponible.'));
 
     await expect(depositFunds(42, { currencyCode: 'XYZ', amount: 100 })).rejects.toThrow(/no está disponible/);
     expect(Wallet.findOne).not.toHaveBeenCalled();
@@ -146,7 +170,7 @@ describe('deposit.service — depositFunds', () => {
 
   it('normaliza currencyCode a mayúsculas', async () => {
     const balance = makeBalance('0');
-    (Balance.findOne as any).mockResolvedValue(balance);
+    vi.mocked(Balance.findOne).mockResolvedValue(asBalance(balance));
 
     await depositFunds(42, { currencyCode: 'ars', amount: 100 });
 
@@ -157,7 +181,7 @@ describe('deposit.service — depositFunds', () => {
   });
 
   it('rechaza si el usuario no tiene wallet asociada y hace rollback', async () => {
-    (Wallet.findOne as any).mockResolvedValue(null);
+    vi.mocked(Wallet.findOne).mockResolvedValue(null);
 
     await expect(depositFunds(42, { currencyCode: 'ARS', amount: 100 })).rejects.toThrow(
       /no tiene una wallet asociada/
@@ -167,9 +191,9 @@ describe('deposit.service — depositFunds', () => {
   });
 
   it('crea el balance en 0 si todavía no existía, y después le suma el depósito', async () => {
-    (Balance.findOne as any).mockResolvedValue(null);
+    vi.mocked(Balance.findOne).mockResolvedValue(null);
     const created = makeBalance('0');
-    (Balance.create as any).mockResolvedValue(created);
+    vi.mocked(Balance.create).mockResolvedValue(asBalance(created));
 
     await depositFunds(42, { currencyCode: 'BRL', amount: 250 });
 
@@ -185,7 +209,7 @@ describe('deposit.service — depositFunds', () => {
 
   it('suma el depósito sobre un balance ya existente', async () => {
     const balance = makeBalance('1000');
-    (Balance.findOne as any).mockResolvedValue(balance);
+    vi.mocked(Balance.findOne).mockResolvedValue(asBalance(balance));
 
     await depositFunds(42, { currencyCode: 'ARS', amount: 500 });
 
@@ -197,7 +221,7 @@ describe('deposit.service — depositFunds', () => {
 
   it('crea la transacción como type="deposit", sin comisión ni tasa de cambio, y commitea', async () => {
     const balance = makeBalance('0');
-    (Balance.findOne as any).mockResolvedValue(balance);
+    vi.mocked(Balance.findOne).mockResolvedValue(asBalance(balance));
 
     const result = await depositFunds(42, { currencyCode: 'ARS', amount: 5000 });
 
@@ -226,7 +250,7 @@ describe('deposit.service — depositFunds', () => {
 
   it('actualmente NO manda email de confirmación (el bloque está comentado en el service)', async () => {
     const balance = makeBalance('0');
-    (Balance.findOne as any).mockResolvedValue(balance);
+    vi.mocked(Balance.findOne).mockResolvedValue(asBalance(balance));
 
     await depositFunds(42, { currencyCode: 'ARS', amount: 100 });
 
@@ -234,7 +258,7 @@ describe('deposit.service — depositFunds', () => {
   });
 
   it('si falla después de abrir la transacción, hace rollback y no commitea', async () => {
-    (Balance.findOne as any).mockRejectedValue(new Error('DB caída'));
+    vi.mocked(Balance.findOne).mockRejectedValue(new Error('DB caída'));
 
     await expect(depositFunds(42, { currencyCode: 'ARS', amount: 100 })).rejects.toThrow('DB caída');
     expect(mockTransaction.rollback).toHaveBeenCalledTimes(1);

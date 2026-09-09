@@ -1,15 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { User as UserModel } from '../src/models/users.model.js';
 
 const ORIGINAL_ENV = { ...process.env };
 
-function makeUser(overrides: Partial<{ id: number; name: string; surname: string; email: string }> = {}) {
-  return {
+function makeUser(overrides: Partial<{ id: number; name: string; surname: string; email: string }> = {}): UserModel {
+  const partial = {
     id: 1,
     name: 'Gisella',
     surname: 'Fernández',
     email: 'gisella@test.com',
     ...overrides,
-  } as any;
+  };
+  return partial as unknown as UserModel;
 }
 
 const baseDetails = {
@@ -22,6 +24,13 @@ const baseDetails = {
   currencyDestination: 'ARS',
   transactionDate: new Date('2026-01-01T15:30:00Z'),
 };
+
+function lastFetchBody(): { to: string; type: string; variables: Record<string, string> } {
+  const call = vi.mocked(fetch).mock.calls[0];
+  const options = call?.[1];
+  const body = typeof options?.body === 'string' ? options.body : '{}';
+  return JSON.parse(body);
+}
 
 describe('mail.ts', () => {
   beforeEach(() => {
@@ -75,9 +84,7 @@ describe('mail.ts', () => {
 
       await sendTransactionEmail(user, { ...baseDetails, counterpartyName: 'Juan Pérez' });
 
-      const [, options] = (fetch as any).mock.calls[0];
-      const body = JSON.parse(options.body);
-
+      const body = lastFetchBody();
       expect(body.type).toBe('transaction_sent');
       expect(body.variables).toEqual(
         expect.objectContaining({
@@ -103,9 +110,7 @@ describe('mail.ts', () => {
         exchangeRate: '1200'
       });
 
-      const [, options] = (fetch as any).mock.calls[0];
-      const body = JSON.parse(options.body);
-
+      const body = lastFetchBody();
       expect(body.type).toBe('exchange_success');
       expect(body.variables).toEqual(
         expect.objectContaining({
@@ -122,9 +127,7 @@ describe('mail.ts', () => {
       const { sendWelcomeEmail } = await import('../src/mails/mail.js');
       await sendWelcomeEmail(makeUser(), 'https://noma.com/confirm');
 
-      const [, options] = (fetch as any).mock.calls[0];
-      const body = JSON.parse(options.body);
-
+      const body = lastFetchBody();
       expect(body.type).toBe('welcome');
       expect(body.variables.CONFIRM_LINK).toBe('https://noma.com/confirm');
     });
@@ -141,9 +144,7 @@ describe('mail.ts', () => {
         reactivationLink: 'https://noma.com/reactivate'
       });
 
-      const [, options] = (fetch as any).mock.calls[0];
-      const body = JSON.parse(options.body);
-
+      const body = lastFetchBody();
       expect(body.type).toBe('account_deletion');
       expect(body.variables.FINAL_BALANCE).toBe('ARS 0,00');
     });
@@ -163,13 +164,12 @@ describe('mail.ts', () => {
         preferencesLink: 'link'
       });
 
-      const [, options] = (fetch as any).mock.calls[0];
-      const body = JSON.parse(options.body);
-
+      const body = lastFetchBody();
       expect(body.type).toBe('weekly_summary');
       expect(body.variables.ENTRADAS_COUNT).toBe('1');
     });
   });
+
   describe('tests originales recuperados (errores y validaciones)', () => {
     it('avisa por consola y no hace fetch si falta MAIL_SERVICE_URL', async () => {
       delete process.env.MAIL_SERVICE_URL;
@@ -213,8 +213,8 @@ describe('mail.ts', () => {
         role: 'receiver',
         counterpartyName: 'Gisella Fernández',
       });
-      const [, options] = (fetch as any).mock.calls[0];
-      expect(JSON.parse(options.body).type).toBe('transaction_received');
+      const body = lastFetchBody();
+      expect(body.type).toBe('transaction_received');
     });
 
     it('usa "transaction_sent_rejected" si la transferencia falló', async () => {
@@ -224,8 +224,8 @@ describe('mail.ts', () => {
         type: 'transfer',
         status: 'rejected'
       });
-      const [, options] = (fetch as any).mock.calls[0];
-      expect(JSON.parse(options.body).type).toBe('transaction_sent_rejected');
+      const body = lastFetchBody();
+      expect(body.type).toBe('transaction_sent_rejected');
     });
   });
 

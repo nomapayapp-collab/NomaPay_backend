@@ -9,6 +9,10 @@ import { Currency } from '../src/models/currency.model.js';
 
 vi.mock('jsonwebtoken');
 
+
+type SyncJwtVerify = (token: string, secretOrPublicKey: jwt.Secret) => jwt.JwtPayload;
+const verifyMock = vi.mocked(jwt.verify as unknown as SyncJwtVerify);
+
 describe('Wallet Endpoints', () => {
     it('GET /api/wallets/me - Debería rechazar con 401 si no hay cookie de autenticación', async () => {
         const res = await request(app).get('/api/wallets/me');
@@ -34,7 +38,7 @@ describe('Wallet Endpoints', () => {
         expect(res.body.error).toBe('Token inválido.');
     });
     it('GET /api/wallets/me - Debería devolver la wallet y balances si el usuario está autenticado', async () => {
-        vi.mocked(jwt.verify).mockReturnValue({ userId: 1, email: 'test@nomapay.com' } as any);
+        verifyMock.mockReturnValue({ userId: 1, email: 'test@nomapay.com' });
         vi.spyOn(walletService, 'getWalletSummary').mockResolvedValue({
             walletId: 10,
             preferredCurrency: 'USD',
@@ -55,15 +59,15 @@ describe('Wallet Endpoints', () => {
     });
 
     it('GET /api/wallets/me/exchange-rates - Debería devolver las tasas filtradas por monedas activas', async () => {
-        vi.mocked(jwt.verify).mockReturnValue({ userId: 1, email: 'test@nomapay.com' } as any);
+        verifyMock.mockReturnValue({ userId: 1, email: 'test@nomapay.com' });
         vi.spyOn(Currency, 'findAll').mockResolvedValue([
-            { code: 'USD' } as any,
-            { code: 'BRL' } as any,
+            { code: 'USD' } as unknown as Currency,
+            { code: 'BRL' } as unknown as Currency,
         ]);
         vi.spyOn(exchangeRateService, 'getRatesForBase').mockResolvedValue({
             USD: 0.000663,
             BRL: 0.003378,
-            EUR: 0.00061, // no está entre las monedas activas: no debería aparecer en la respuesta
+            EUR: 0.00061,
         });
 
         const res = await request(app)
@@ -84,17 +88,17 @@ describe('Wallet Endpoints', () => {
     });
 
     it('POST /api/wallets/me/exchange - Debería rechazar con 400 si faltan campos obligatorios', async () => {
-        vi.mocked(jwt.verify).mockReturnValue({ userId: 1, email: 'test@nomapay.com' } as any);
+        verifyMock.mockReturnValue({ userId: 1, email: 'test@nomapay.com' });
         const res = await request(app)
             .post('/api/wallets/me/exchange')
             .set('Cookie', 'accessToken=fake-valid-token')
-            .send({ fromCurrency: 'ARS' }); // falta toCurrency y amount
+            .send({ fromCurrency: 'ARS' });
         expect(res.status).toBe(400);
         expect(res.body.error).toMatch(/Faltan/);
     });
 
     it('POST /api/wallets/me/exchange - Debería devolver 201 con la transacción y la wallet actualizada', async () => {
-        vi.mocked(jwt.verify).mockReturnValue({ userId: 1, email: 'test@nomapay.com' } as any);
+        verifyMock.mockReturnValue({ userId: 1, email: 'test@nomapay.com' });
         vi.spyOn(walletOperationsService, 'exchangeCurrency').mockResolvedValue({
             transaction: {
                 id: 4,

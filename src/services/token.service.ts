@@ -1,4 +1,4 @@
-// services/token.service.ts
+
 import { RefreshToken } from '../models/refresh-token.model.js';
 import { User } from '../models/users.model.js';
 import { generateRefreshToken, hashToken, signAccessToken } from '../utils/jwt.util.js';

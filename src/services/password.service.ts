@@ -1,4 +1,4 @@
-// services/password.service.ts
+
 import bcrypt from 'bcrypt';
 import { User } from '../models/users.model.js';
 import { NotFoundError, ValidationError } from '../errors/app-error.js';

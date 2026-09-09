@@ -7,7 +7,7 @@ export interface AuthenticatedRequest extends Request {
 }
 
 export function requireAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  // Ahora buscamos el token en las cookies (gracias a cookie-parser)
+
   const token = req.cookies.accessToken;
 
   if (!token) {

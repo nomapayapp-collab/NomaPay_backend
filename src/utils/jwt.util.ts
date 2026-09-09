@@ -1,8 +1,8 @@
-// utils/jwt.util.ts
+
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 
-interface JwtPayload {
+export interface JwtPayload {
   userId: number;
   email: string;
 }

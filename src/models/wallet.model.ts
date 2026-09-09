@@ -1,7 +1,7 @@
-// wallet.model.ts
+
 import { DataTypes, Model } from 'sequelize';
 import type { InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
-import  sequelize  from '../db.js';
+import sequelize from '../db.js';
 
 export class Wallet extends Model<InferAttributes<Wallet>, InferCreationAttributes<Wallet>> {
   declare id: CreationOptional<number>;

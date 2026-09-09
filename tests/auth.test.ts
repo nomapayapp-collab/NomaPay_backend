@@ -4,6 +4,7 @@ import app from '../src/app.js';
 import * as loginService from '../src/services/login.service.js';
 import * as authService from '../src/services/auth.service.js';
 import * as tokenService from '../src/services/token.service.js';
+import type { RegisterUserResult } from '../src/services/auth.service.js';
 
 
 describe('Auth Endpoints', () => {
@@ -96,10 +97,19 @@ describe('Auth Endpoints', () => {
 
 
     it('POST /api/auth/login - Debería hacer login exitoso y devolver cookies seguras', async () => {
+        const loggedInUser: RegisterUserResult = {
+            id: 1,
+            email: 'test@nomapay.com',
+            name: 'Test',
+            surname: 'User',
+            username: 'test.user',
+            alias: 'test.user',
+            cbu: '1234567890123456789012',
+        };
         vi.spyOn(loginService, 'loginUser').mockResolvedValue({
             accessToken: 'fake-access-token-123',
             refreshToken: 'fake-refresh-token-456',
-            user: { id: 1, email: 'test@nomapay.com', name: 'Test' } as any
+            user: loggedInUser
         });
 
         const res = await request(app)

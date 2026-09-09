@@ -10,9 +10,7 @@ import { getWalletSummary } from './wallet.service.js';
 import type { WalletSummary } from './wallet.service.js';
 import { round2 } from '../utils/money.util.js';
 
-// Límite máximo por carga, definido por moneda. Cada uno puede sobreescribirse
-// por variable de entorno; si se agrega una moneda nueva y no tiene límite
-// propio configurado, se usa DEFAULT_MAX_DEPOSIT_AMOUNT como respaldo.
+
 export const DEPOSIT_LIMITS: { readonly USD: number; readonly ARS: number; readonly BRL: number } = {
     USD: Number(process.env.MAX_DEPOSIT_USD ?? 10_000),
     ARS: Number(process.env.MAX_DEPOSIT_ARS ?? 50_000_000),
@@ -111,16 +109,20 @@ export async function depositFunds(userId: number, input: DepositInput): Promise
 
         await t.commit();
         committed = true;
-        /*
-            const user = await User.findByPk(userId);
-            if (user) {
-              sendTransactionEmail(user, {
-                currencyCode,
-                amount: round2(amount),
+
+        const user = await User.findByPk(userId);
+        if (user) {
+            sendTransactionEmail(user, {
+                type: 'deposit',
+                amount: amount.toFixed(8),
+                fee: '0',
+                finalAmount: amount.toFixed(8),
+                currencyOrigin: currencyCode,
+                currencyDestination: currencyCode,
                 transactionDate: createdTransaction.transactionDate,
-              }).catch((err) => console.error('❌ Error enviando email de depósito:', err));
-            }
-        */
+                sourceAccount: 'Carga de saldo',
+            }).catch((err) => console.error(' Error enviando email de depósito:', err));
+        }
         const walletSummary = await getWalletSummary(userId);
 
         return {

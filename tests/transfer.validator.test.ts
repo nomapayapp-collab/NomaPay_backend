@@ -1,5 +1,5 @@
-// tests/transfer.validator.test.ts
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { validateTransfer } from '../src/middlewares/transfer.validator.js';
 import type { Request, Response, NextFunction } from 'express';
 
@@ -7,8 +7,8 @@ describe('transfer.validator — validateTransfer', () => {
     let req: Partial<Request>;
     let res: Partial<Response>;
     let next: NextFunction;
-    let jsonMock: any;
-    let statusMock: any;
+    let jsonMock: Mock;
+    let statusMock: Mock;
 
     beforeEach(() => {
         jsonMock = vi.fn();
