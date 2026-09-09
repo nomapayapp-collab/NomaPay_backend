@@ -10,6 +10,8 @@ import transferRoutes from "./transfer.routes.js";
 import chatbotRoutes from "./chatbot.routes.js";
 import historyRoutes from "./history.routes.js";
 import contactRoutes from "./contact.routes.js";
+import resetPasswordRoutes from "./reset-password.routes.js";
+
 
 
 
@@ -26,6 +28,8 @@ router.use("/transfers", transferRoutes);
 router.use("/chatbot", chatbotRoutes);
 router.use("/history", historyRoutes);
 router.use("/contacts", contactRoutes);
+router.use("/auth", resetPasswordRoutes);
+
 
 
 
