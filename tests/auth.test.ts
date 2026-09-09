@@ -69,7 +69,7 @@ describe('Auth Endpoints', () => {
             username: 'test.user',
             alias: 'test.user',
             cbu: '1234567890123456789012'
-        } as any); //PREGUNTAR EL ANY
+        });
 
         const res = await request(app)
             .post('/api/auth/register')
