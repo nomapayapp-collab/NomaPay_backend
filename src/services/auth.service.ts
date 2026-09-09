@@ -6,6 +6,8 @@ import { Wallet } from '../models/wallet.model.js';
 import { Balance } from '../models/balance.model.js';
 import { Currency } from '../models/currency.model.js';
 import { ConflictError } from '../errors/app-error.js';
+import { sendWelcomeEmail } from '../mails/mail.js';
+
 
 interface RegisterInput {
   name: string;
@@ -64,6 +66,10 @@ export async function registerUser(input: RegisterInput): Promise<RegisterUserRe
     );
 
     await t.commit();
+
+    sendWelcomeEmail(user, `${process.env.MAIL_SERVICE_URL}`)
+      .catch((err) => console.error('❌ Error enviando email de bienvenida:', err));
+
 
     return {
       id: user.id,
