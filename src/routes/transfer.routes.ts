@@ -1,4 +1,4 @@
-// routes/transfer.routes.ts
+
 import { Router } from 'express';
 import { postTransfer } from '../controllers/transfer.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';

@@ -1,4 +1,4 @@
-// subscription.model.ts
+
 import { DataTypes, Model } from 'sequelize';
 import type { InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
 import sequelize from '../db.js';

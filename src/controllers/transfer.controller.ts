@@ -1,4 +1,4 @@
-// src/controllers/transfer.controller.ts
+
 import type { Response } from 'express';
 import type { AuthenticatedRequest } from '../middlewares/auth.middleware.js';
 import { transferFunds } from '../services/transfer.service.js';
@@ -6,13 +6,13 @@ import { AppError } from '../errors/app-error.js';
 
 export async function postTransfer(req: AuthenticatedRequest, res: Response) {
     try {
-        const { aliasOrCbu, currencyCode, amount, message } = req.body; // <-- Agregar message acá
+        const { aliasOrCbu, currencyCode, amount, message } = req.body;
 
         const result = await transferFunds(req.user!.userId, {
             aliasOrCbu,
             currencyCode,
             amount: Number(amount),
-            message, // <-- Y agregarlo acá para que le llegue al service
+            message,
         });
 
         return res.status(201).json(result);

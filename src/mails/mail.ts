@@ -11,46 +11,36 @@ function getMailInternalSecret(): string | undefined {
   return process.env.MAIL_INTERNAL_SECRET;
 }
 
-// ============================================================================
-// Transacciones (transferencias y conversiones de divisas)
-// ============================================================================
+
 
 export interface TransactionEmailDetails {
-  type: TransactionType; // 'transfer' | 'exchange' (deposit todavía no tiene template)
-  /** Resultado de la operación. Opcional: si no viene se asume 'completed'. */
+  type: TransactionType;
+
   status?: 'completed' | 'rejected';
-  /** N° de operación a mostrar en el comprobante (ej. "NP-88213X"). Opcional:
-   *  si no viene, se genera una referencia a partir de la fecha. */
+
   operationNumber?: string;
   amount: string;
   fee: string;
   finalAmount: string;
   currencyOrigin: string;
   currencyDestination: string;
-  /** Requerido para 'exchange' (tipo de cambio usado, ej. "1 USD = 1.180 ARS"). */
+
   exchangeRate?: string;
   transactionDate: Date;
-  role?: 'sender' | 'receiver'; // solo aplica a 'transfer'
-  counterpartyName?: string; // solo aplica a 'transfer'
+  role?: 'sender' | 'receiver';
+  counterpartyName?: string;
 
-  // --- Transferencia EXITOSA enviada por el usuario (role: 'sender') ---
+
   counterpartyAlias?: string;
   sourceAccount?: string;
 
-  // --- Transferencia EXITOSA recibida por el usuario (role: 'receiver') ---
+
   destinationAccount?: string;
 
-  // --- Transferencia / conversión RECHAZADA. El alias/CBU y las monedas ya
-  //     se validan antes de intentar la operación, así que esto es siempre
-  //     por una falla técnica/de infraestructura, nunca por datos inválidos.
+
   rejectionReason?: string;
 }
 
-/** Decide qué key de EMAIL_TEMPLATES usar. Para 'transfer' hay 3 templates
- *  (transaction_sent, transaction_sent_rejected, transaction_received) y para
- *  'exchange' hay 2 (exchange_success, exchange_rejected) — ver
- *  _email-templates.ts. Un rechazo de transferencia nunca se le manda a quien
- *  recibe. */
 function buildTemplateType(details: TransactionEmailDetails): string {
   const status = details.status ?? 'completed';
 
@@ -63,7 +53,7 @@ function buildTemplateType(details: TransactionEmailDetails): string {
     return status === 'rejected' ? 'exchange_rejected' : 'exchange_success';
   }
 
-  // deposit: todavía no tiene template en Stripo (pendiente).
+
   return `transaction_${details.type}`;
 }
 
@@ -71,16 +61,12 @@ function formatDate(date: Date): string {
   return date.toLocaleString('es-AR', { dateStyle: 'medium', timeStyle: 'short' });
 }
 
-/** Referencia de respaldo para {{NUMERO_OPERACION}} cuando quien llama no
- *  pasa operationNumber. No es un id de base de datos, solo texto para que
- *  el mail no muestre un hueco vacío. */
+
 function buildFallbackOperationNumber(date: Date): string {
   return `NP-${date.getTime().toString(36).toUpperCase()}`;
 }
 
-/** Arma el objeto de variables que espera cada template. Los nombres de acá
- *  tienen que ser EXACTAMENTE los mismos {{...}} que usa cada template en
- *  _email-templates.ts, si no el campo llega vacío al mail. */
+
 function buildVariables(
   templateType: string,
   details: TransactionEmailDetails,
@@ -140,7 +126,6 @@ function buildVariables(
     };
   }
 
-  // transaction_sent (transferencia enviada, exitosa)
   return {
     ...common,
     MONEDA: details.currencyOrigin,
@@ -152,13 +137,11 @@ function buildVariables(
   };
 }
 
-// ============================================================================
-// Mails que no son de una transacción (registro, baja de cuenta, resumen)
-// ============================================================================
+
 
 export interface AccountDeletionEmailDetails {
   deletedAt: Date;
-  /** Saldo final ya formateado para mostrar, ej. "ARS 0,00". */
+
   finalBalance: string;
   ticketId: string;
   reactivationDeadline: Date;
@@ -166,19 +149,17 @@ export interface AccountDeletionEmailDetails {
 }
 
 export interface WeeklySummaryEmailDetails {
-  /** Ej. "1 — 7 de Septiembre". */
+
   rangeLabel: string;
-  /** Ya formateado con moneda, ej. "USD 9.504,60". */
+
   totalBalance: string;
-  /** amountShort: solo el número (va con +/− delante en el tile).
-   *  amountFull: número + moneda (va en la fila de "Esta semana"). */
+
   income: { amountShort: string; amountFull: string; count: number };
   expenses: { amountShort: string; amountFull: string; count: number };
   exchanges: { amountShort: string; amountFull: string; count: number };
-  /** Si no hay datos suficientes en la semana, no mandar este campo. */
+
   bestDay?: { label: string; detail: string };
-  /** Texto libre para el pie de página (compara con la semana pasada, o
-   *  avisa que todavía no hay datos para comparar la primera vez). */
+
   comparisonText: string;
   movementsLink: string;
   preferencesLink: string;
@@ -251,7 +232,7 @@ export async function sendPasswordResetEmail(user: User, resetLink: string): Pro
   });
 }
 
-/** Llamar cuando se crea el usuario, para que confirme su email. */
+
 export async function sendWelcomeEmail(user: User, confirmLink: string): Promise<void> {
   if (!user.email) return;
   if (!MAIL_SERVICE_ENABLED) {
@@ -271,8 +252,7 @@ export async function sendWelcomeEmail(user: User, confirmLink: string): Promise
   });
 }
 
-/** Llamar cuando se confirma la baja de la cuenta (después de borrar/anonimizar
- *  los datos correspondientes). */
+
 export async function sendAccountDeletionEmail(user: User, details: AccountDeletionEmailDetails): Promise<void> {
   if (!user.email) return;
   if (!MAIL_SERVICE_ENABLED) {
@@ -296,7 +276,7 @@ export async function sendAccountDeletionEmail(user: User, details: AccountDelet
   });
 }
 
-/** Llamar desde el job/cron que arma el resumen semanal de cada usuario. */
+
 export async function sendWeeklySummaryEmail(user: User, details: WeeklySummaryEmailDetails): Promise<void> {
   if (!user.email) return;
   if (!MAIL_SERVICE_ENABLED) {

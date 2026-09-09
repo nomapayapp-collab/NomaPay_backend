@@ -1,4 +1,5 @@
 import bcrypt from 'bcrypt';
+import { UniqueConstraintError } from 'sequelize';
 import sequelize from '../db.js';
 import { User } from '../models/users.model.js';
 import { Wallet } from '../models/wallet.model.js';
@@ -39,7 +40,7 @@ export async function registerUser(input: RegisterInput): Promise<RegisterUserRe
         country: country.toUpperCase(),
         email: email.toLowerCase().trim(),
         passwordHash,
-        
+
       },
       { transaction: t }
     );
@@ -73,9 +74,9 @@ export async function registerUser(input: RegisterInput): Promise<RegisterUserRe
       alias: user.alias as string,
       cbu: user.cbu,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     await t.rollback();
-    if (err.name === 'SequelizeUniqueConstraintError') {
+    if (err instanceof UniqueConstraintError) {
       const field = err.errors?.[0]?.path;
       throw new ConflictError(`Ya existe una cuenta con ese ${field === 'email' ? 'email' : 'dato'}.`);
     }

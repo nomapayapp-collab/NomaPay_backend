@@ -1,4 +1,4 @@
-// middlewares/transfer.validator.ts
+
 import type { Request, Response, NextFunction } from 'express';
 
 export function validateTransfer(req: Request, res: Response, next: NextFunction) {

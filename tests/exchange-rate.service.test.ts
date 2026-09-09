@@ -128,7 +128,7 @@ describe('exchange-rate.service', () => {
         vi.stubGlobal('fetch', okFetch);
         await getRatesForBase('USD');
 
-      
+
         vi.useFakeTimers();
         vi.setSystemTime(Date.now() + 2 * 60 * 60 * 1000);
 

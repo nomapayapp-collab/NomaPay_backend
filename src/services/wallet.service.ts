@@ -1,4 +1,4 @@
-// services/wallet.service.ts
+
 import { Wallet } from '../models/wallet.model.js';
 import { Balance } from '../models/balance.model.js';
 import { Currency } from '../models/currency.model.js';
@@ -40,7 +40,7 @@ export async function getWalletSummary(userId: number): Promise<WalletSummary> {
         currencyCode: b.currencyCode,
         currencyName: currency?.name ?? b.currencyCode,
         symbol: currency?.symbol ?? null,
-        
+
         amount: round2(b.amount),
       };
     }),

@@ -1,4 +1,4 @@
-// controllers/history.controller.ts
+
 import type { Response } from 'express';
 import type { AuthenticatedRequest } from '../middlewares/auth.middleware.js';
 import { getUserHistory } from '../services/history.service.js';
