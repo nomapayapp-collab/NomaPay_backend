@@ -22,7 +22,7 @@ export async function requestPasswordReset(email: string): Promise<void> {
         resetPasswordTokenExpiresAt: expiresAt
     });
 
-    const resetLink = `https://nomapay-frontend.vercel.app/reset-password?token=${token}`;
+    const resetLink = `${process.env.MAIL_SERVICE_URL}/reset-password?token=${token}`;
 
     await sendPasswordResetEmail(user, resetLink);
 }
