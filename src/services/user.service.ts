@@ -1,4 +1,5 @@
-// services/user.service.ts
+
+import { UniqueConstraintError } from 'sequelize';
 import { User } from '../models/users.model.js';
 import { ConflictError, NotFoundError, ValidationError } from '../errors/app-error.js';
 import { Wallet } from '../models/wallet.model.js';
@@ -19,8 +20,6 @@ export interface UserProfile {
 
 const USERNAME_COOLDOWN_DAYS = 30;
 
-// Campos que el usuario NUNCA puede modificar desde este endpoint.
-// email/cbu: identificadores fijos. documentType/documentNumber: no editables por ahora.
 const IMMUTABLE_FIELDS = ['email', 'cbu', 'documentType', 'documentNumber'] as const;
 
 interface UpdateProfileInput {
@@ -85,8 +84,8 @@ export async function updateUserProfile(
 
   try {
     await user.update(updates);
-  } catch (err: any) {
-    if (err.name === 'SequelizeUniqueConstraintError') {
+  } catch (err: unknown) {
+    if (err instanceof UniqueConstraintError) {
       const field = err.errors?.[0]?.path;
       const label = field === 'alias' ? 'alias' : 'username';
       throw new ConflictError(`Ese ${label} ya está en uso.`);
@@ -131,13 +130,13 @@ export async function deleteUserAccount(userId: number): Promise<void> {
   if (wallet) {
     const balances = await Balance.findAll({ where: { walletId: wallet.id } });
 
-    // Verificamos si tiene saldo > 0 en alguna moneda
+
     const hasMoney = balances.some(b => Number(b.amount) > 0);
     if (hasMoney) {
       throw new ValidationError('No podés eliminar tu cuenta porque tenés saldo a favor. Transferilo o cambialo antes de darte de baja.');
     }
   }
-  // Renombramos los campos únicos para que pueda volver a registrarse
+
   await user.update({
     email: `deleted_${user.id}_${user.email}`,
     username: null,
@@ -145,6 +144,6 @@ export async function deleteUserAccount(userId: number): Promise<void> {
     googleId: null,
     cbu: null
   });
-  // Esto hace el soft-delete gracias al paranoid: true
+
   await user.destroy();
 };

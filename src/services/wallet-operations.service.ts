@@ -46,19 +46,19 @@ export interface ConversionMath {
 }
 
 export function calculateConversion(
-  amount: number,
-  rate: number,
-  feePercentage: number = TRANSACTION_FEE_PERCENTAGE
+    amount: number,
+    rate: number,
+    feePercentage: number = TRANSACTION_FEE_PERCENTAGE
 ): ConversionMath {
-  const fee = (amount * feePercentage) / 100;
+    const fee = (amount * feePercentage) / 100;
 
-  const totalDebit = amount; 
+    const totalDebit = amount;
 
-  const amountToConvert = amount - fee;
+    const amountToConvert = amount - fee;
 
-  const destinationAmount = amountToConvert / rate;
+    const destinationAmount = amountToConvert / rate;
 
-  return { fee, totalDebit, destinationAmount };
+    return { fee, totalDebit, destinationAmount };
 }
 
 

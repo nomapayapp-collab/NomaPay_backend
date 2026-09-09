@@ -1,8 +1,7 @@
-
 import { AppError } from '../errors/app-error.js';
 
 interface FetchJsonOptions extends RequestInit {
-   
+
     timeoutMs?: number;
 }
 
@@ -23,14 +22,15 @@ export async function fetchJson<T>(url: string, options: FetchJsonOptions = {}):
         }
 
         return (await response.json()) as T;
-    } catch (err: any) {
+    } catch (err: unknown) {
         if (err instanceof AppError) {
             throw err;
         }
-        if (err?.name === 'AbortError') {
+        if (err instanceof Error && err.name === 'AbortError') {
             throw new AppError(504, `La API externa no respondió a tiempo (${url}).`);
         }
-        throw new AppError(502, `Error al conectar con la API externa (${url}): ${err?.message ?? err}`);
+        const message = err instanceof Error ? err.message : String(err);
+        throw new AppError(502, `Error al conectar con la API externa (${url}): ${message}`);
     } finally {
         clearTimeout(timeoutId);
     }

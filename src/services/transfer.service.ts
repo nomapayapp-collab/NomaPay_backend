@@ -27,7 +27,7 @@ export async function transferFunds(senderId: number, input: TransferInput) {
     let committed = false;
 
     try {
-        // 1. Validar y obtener el usuario receptor por su Alias O CBU
+
         const receiverUser = await User.findOne({
             where: {
                 [Op.or]: [{ alias: input.aliasOrCbu }, { cbu: input.aliasOrCbu }],
@@ -43,7 +43,7 @@ export async function transferFunds(senderId: number, input: TransferInput) {
             throw new ValidationError('No podés transferirte dinero a vos mismo por esta vía.');
         }
 
-        // 2. Obtener wallets bloqueándolas para evitar problemas de concurrencia
+
         const senderWallet = await Wallet.findOne({
             where: { userId: senderId },
             transaction: t,
@@ -58,7 +58,6 @@ export async function transferFunds(senderId: number, input: TransferInput) {
         });
         if (!receiverWallet) throw new NotFoundError('El usuario destino no tiene wallet activa.');
 
-        // 3. Verificar y descontar saldo del emisor
         const senderBalance = await Balance.findOne({
             where: { walletId: senderWallet.id, currencyCode },
             transaction: t,
@@ -74,7 +73,7 @@ export async function transferFunds(senderId: number, input: TransferInput) {
             updatedAt: new Date(),
         }, { transaction: t });
 
-        // 4. Sumar saldo al receptor
+
         let receiverBalance = await Balance.findOne({
             where: { walletId: receiverWallet.id, currencyCode },
             transaction: t,
@@ -82,7 +81,7 @@ export async function transferFunds(senderId: number, input: TransferInput) {
         });
 
         if (!receiverBalance) {
-            // Si el receptor no tenía balance en esta moneda, se lo creamos en 0 primero
+
             receiverBalance = await Balance.create(
                 { walletId: receiverWallet.id, currencyCode, amount: '0' },
                 { transaction: t }
@@ -94,7 +93,7 @@ export async function transferFunds(senderId: number, input: TransferInput) {
             updatedAt: new Date(),
         }, { transaction: t });
 
-        // 5. Registrar la transacción de transferencia
+
         const createdTransaction = await Transaction.create({
             senderWalletId: senderWallet.id,
             receiverWalletId: receiverWallet.id,
@@ -111,10 +110,7 @@ export async function transferFunds(senderId: number, input: TransferInput) {
         await t.commit();
         committed = true;
 
-        // 6. Enviar emails a las dos puntas de la transferencia.
-        // No hay conversión de moneda en un transfer, así que currencyDestination
-        // va con la misma moneda de origen y exchangeRate directamente no se manda
-        // (queda undefined -> el mail.ts lo resuelve como '' para el template).
+
         const senderUser = await User.findByPk(senderId);
         if (senderUser) {
             sendTransactionEmail(senderUser, {

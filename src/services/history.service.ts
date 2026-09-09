@@ -1,4 +1,4 @@
-// services/history.service.ts
+
 import { Transaction } from '../models/transaction.model.js';
 import { Wallet } from '../models/wallet.model.js';
 import { User } from '../models/users.model.js';
@@ -12,14 +12,14 @@ export interface HistoryItem {
     transactionDate: Date;
     amount: number;
     currencyCode: string;
-    fee: number; // <-- NUEVO
+    fee: number;
     message?: string;
     exchangeData?: {
         currencyOrigin: string;
         currencyDestination: string;
         finalAmount: number;
     };
-    counterparty?: { // <-- NUEVO
+    counterparty?: {
         name: string;
         alias: string;
     };
@@ -38,7 +38,7 @@ export async function getUserHistory(userId: number): Promise<HistoryItem[]> {
         order: [['transactionDate', 'DESC']],
     });
 
-    // Resolvemos todas las contrapartes en bloque para no hacer queries N+1
+
     const counterpartyWalletIds = new Set<number>();
     for (const t of transactions) {
         if (t.type === 'transfer') {
@@ -58,7 +58,7 @@ export async function getUserHistory(userId: number): Promise<HistoryItem[]> {
     const userById = new Map(counterpartyUsers.map((u) => [u.id, u]));
     const walletUserId = new Map(counterpartyWallets.map((w) => [w.id, w.userId]));
 
-    // Mapeamos el modelo de Sequelize al formato limpio para el frontend
+
     return transactions.map((t) => {
         let operationType: 'carga' | 'pago' | 'cobro' | 'cambio';
         let amount = Number(t.amount);
@@ -83,7 +83,7 @@ export async function getUserHistory(userId: number): Promise<HistoryItem[]> {
             transactionDate: t.transactionDate as Date,
             amount,
             currencyCode,
-            fee: Number(t.fee), // <-- NUEVO
+            fee: Number(t.fee),
             message: t.message || undefined,
         };
 
@@ -95,7 +95,7 @@ export async function getUserHistory(userId: number): Promise<HistoryItem[]> {
             };
         }
 
-        // Agregamos la contraparte si es transferencia
+
         if (operationType === 'pago' || operationType === 'cobro') {
             const otherWalletId = t.senderWalletId === wallet.id ? t.receiverWalletId : t.senderWalletId;
             const otherUserId = otherWalletId ? walletUserId.get(otherWalletId) : undefined;

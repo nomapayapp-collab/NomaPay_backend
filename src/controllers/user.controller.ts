@@ -1,4 +1,4 @@
-// controllers/user.controller.ts
+
 import type { Response } from 'express';
 import type { AuthenticatedRequest } from '../middlewares/auth.middleware.js';
 import { getUserProfile, updateUserProfile, updateTheme, deleteUserAccount } from '../services/user.service.js';
@@ -34,7 +34,7 @@ export async function patchTheme(req: AuthenticatedRequest, res: Response) {
   try {
     const { theme } = req.body;
 
-    // Validamos rápido que solo mande light o dark
+
     if (theme !== 'light' && theme !== 'dark') {
       return res.status(400).json({ error: 'El theme debe ser "light" o "dark".' });
     }
@@ -53,7 +53,6 @@ export async function deleteMe(req: AuthenticatedRequest, res: Response) {
   try {
     await deleteUserAccount(req.user!.userId);
 
-    // Le borramos la cookie para hacerle logout instantáneo
     res.clearCookie('accessToken', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
