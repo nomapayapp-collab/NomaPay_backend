@@ -188,7 +188,8 @@ User.init(
   {
     sequelize,
     tableName: 'users',
-    timestamps: false,
+    createdAt: 'created_at',
+    updatedAt: false,
     paranoid: true,
     deletedAt: 'deleted_at',
     indexes: [
