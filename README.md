@@ -92,9 +92,10 @@ La separación en capas (`controller → service → model`) busca que cada arch
 
 users (1) ──── (1) wallets (1) ──── (N) balances ──── (1) currencies
 
-│
 └──── (N) transactions
+
 users (1) ──── (N) refresh_tokens
+
 users (1) ──── (1) subscriptions
 
 
@@ -210,9 +211,9 @@ Con esto arriba, entrá a `http://localhost:3000/api-docs` para ver y probar tod
 | `MAX_DEPOSIT_ARS` | No (default `50000000`) | Monto máximo por carga en ARS |
 | `MAX_DEPOSIT_BRL` | No (default `170000`) | Monto máximo por carga en BRL |
 | `MAX_DEPOSIT_AMOUNT` | No (default `1000000`) | 
-| MAIL_SERVICE_ENABLED | No (default true) | En false, solo loguea el email en consola en vez de mandarlo vía el servicio externo |
-| MAIL_SERVICE_URL | Sí, si MAIL_SERVICE_ENABLED=true | URL base del microservicio externo que envía los correos |
-| MAIL_INTERNAL_SECRET | Sí, si MAIL_SERVICE_ENABLED=true | Secreto interno para validar las llamadas de la API contra el microservicio de correos |
+| `MAIL_SERVICE_ENABLED` | No (default true) | En false, solo loguea el email en consola en vez de mandarlo vía el servicio externo |
+| `MAIL_SERVICE_URL` | Sí, si MAIL_SERVICE_ENABLED=true | URL base del microservicio externo que envía los correos |
+| `MAIL_INTERNAL_SECRET` | Sí, si MAIL_SERVICE_ENABLED=true | Secreto interno para validar las llamadas de la API contra el microservicio de correos |
 | `GEMINI_API_KEY` | No | Necesaria para el chatbot (init perezoso: si falta, `/chatbot/message` devuelve `503` sin afectar al resto de la API) |
 | `GEMINI_MODEL` | No (default `gemini-3.1-flash-lite`) | Modelo de Gemini usado por el chatbot |
 
@@ -230,22 +231,22 @@ Documentados en detalle en `/api-docs`. Resumen:
 | POST | `/api/auth/logout` | No | Revoca el refreshToken |
 | POST | `/api/auth/google/register` | No | Registro con Google |
 | POST | `/api/auth/google/login` | No | Login con Google |
-| POST | /api/auth/forgot-password | No | Solicita link de recuperación (envía mail) |
-| POST | /api/auth/reset-password | No | Restablece la contraseña usando el token |
+| POST | `/api/auth/forgot-password` | No | Solicita link de recuperación (envía mail) |
+| POST | `/api/auth/reset-password` | No | Restablece la contraseña usando el token |
 | GET | `/api/users/me` | Sí | Perfil del usuario autenticado |
 | PATCH | `/api/users/me` | Sí | Actualiza country/username/alias |
-| PATCH | /api/users/me/password | Sí | Cambia la contraseña (requiere contraseña actual) |
-| PATCH | /api/users/me/theme | Sí | Cambia la preferencia de tema (claro/oscuro) del usuario |
-| DELETE | /api/users/me | Sí | Da de baja la cuenta del usuario (soft delete) y envía email |
+| PATCH | `/api/users/me/password` | Sí | Cambia la contraseña (requiere contraseña actual) |
+| PATCH | `/api/users/me/theme` | Sí | Cambia la preferencia de tema (claro/oscuro) del usuario |
+| DELETE | `/api/users/me` | Sí | Da de baja la cuenta del usuario (soft delete) y envía email |
 | GET | `/api/wallets/me` | Sí | Wallet y balances del usuario |
 | PATCH | `/api/wallets/me/preferred-currency` | Sí | Cambia la moneda preferida |
 | POST | `/api/wallets/me/exchange` | Sí | Compra/venta/intercambio entre dos monedas, con tasa real y comisión. Envía email de confirmación por SES |
 | GET | `/api/wallets/me/exchange-rates` | Sí | Tasas de cambio actuales de las monedas activas contra una moneda base (caché con TTL) |
-| GET | /api/wallets/history | Sí | Historial de transacciones de la wallet, paginado y ordenable |
-| POST | /api/wallets/deposit | Sí | Carga dinero simulado directo a una moneda, sin conversión ni comisión. Envía email de confirmación |
-| POST | /api/transfers | Sí | Transfiere saldo a otro usuario por alias o CBU. Envía email de confirmación |
-| GET | /api/transfers/contact | Sí | Obtiene el historial de transferencias con un contacto específico |
-| GET | /api/contacts/lookup | Sí | Busca un usuario por alias o CBU para verificar antes de transferir |
+| GET | `/api/wallets/history` | Sí | Historial de transacciones de la wallet, paginado y ordenable |
+| POST | `/api/wallets/deposit` | Sí | Carga dinero simulado directo a una moneda, sin conversión ni comisión. Envía email de confirmación |
+| POST | `/api/transfers` | Sí | Transfiere saldo a otro usuario por alias o CBU. Envía email de confirmación |
+| GET | `/api/transfers/contact` | Sí | Obtiene el historial de transferencias con un contacto específico |
+| GET | `/api/contacts/lookup` | Sí | Busca un usuario por alias o CBU para verificar antes de transferir |
 | POST | `/api/chatbot/message` | Sí | Asistente conversacional (Gemini) con contexto de NomaPay, sin acceso a datos reales del usuario |
 
 ---
