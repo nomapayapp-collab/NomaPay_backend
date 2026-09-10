@@ -64,14 +64,27 @@ export async function transferFunds(senderId: number, input: TransferInput) {
             lock: t.LOCK.UPDATE,
         });
 
-        if (!senderBalance || Number(senderBalance.amount) < amount) {
-            throw new ValidationError(`Saldo insuficiente. Tenés ${senderBalance ? senderBalance.amount : 0} ${currencyCode}.`);
+        if (!senderBalance) {
+            throw new ValidationError(`Saldo insuficiente. Tenés 0 ${currencyCode}.`);
+        }
+
+        const currentBalance = Number(senderBalance.amount);
+        let effectiveAmount = amount;
+
+        // Tolerancia de redondeo (< 1 centavo) si transfiere todo el saldo visible
+        if (effectiveAmount > currentBalance && (effectiveAmount - currentBalance) < 0.01) {
+            effectiveAmount = currentBalance;
+        }
+
+        if (currentBalance < effectiveAmount) {
+            throw new ValidationError(`Saldo insuficiente. Tenés ${senderBalance.amount} ${currencyCode}.`);
         }
 
         await senderBalance.update({
-            amount: (Number(senderBalance.amount) - amount).toFixed(8),
+            amount: Math.max(0, currentBalance - effectiveAmount).toFixed(8),
             updatedAt: new Date(),
         }, { transaction: t });
+
 
 
         let receiverBalance = await Balance.findOne({
@@ -89,7 +102,7 @@ export async function transferFunds(senderId: number, input: TransferInput) {
         }
 
         await receiverBalance.update({
-            amount: (Number(receiverBalance.amount) + amount).toFixed(8),
+            amount: (Number(receiverBalance.amount) + effectiveAmount).toFixed(8),
             updatedAt: new Date(),
         }, { transaction: t });
 
@@ -101,9 +114,9 @@ export async function transferFunds(senderId: number, input: TransferInput) {
             status: 'completed',
             currencyOrigin: currencyCode,
             currencyDestination: null,
-            amount: amount.toFixed(8),
+            amount: effectiveAmount.toFixed(8),
             fee: '0',
-            finalAmount: amount.toFixed(8),
+            finalAmount: effectiveAmount.toFixed(8),
             message: input.message || null,
         }, { transaction: t });
 
