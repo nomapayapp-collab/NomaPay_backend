@@ -148,21 +148,80 @@ export interface AccountDeletionEmailDetails {
   reactivationLink: string;
 }
 
-export interface WeeklySummaryEmailDetails {
+export type WeeklySummaryCurrencyCode = 'ARS' | 'USD' | 'BRL';
 
-  rangeLabel: string;
+export interface WeeklySummaryCurrencyDetails {
+  code: WeeklySummaryCurrencyCode;
 
   totalBalance: string;
-
-  income: { amountShort: string; amountFull: string; count: number };
-  expenses: { amountShort: string; amountFull: string; count: number };
-  exchanges: { amountShort: string; amountFull: string; count: number };
+  income: { amountShort: string; count: number };
+  expenses: { amountShort: string; count: number };
+  exchanges: { amountShort: string; count: number };
 
   bestDay?: { label: string; detail: string };
-
   comparisonText: string;
+}
+
+export interface WeeklySummaryEmailDetails {
+  rangeLabel: string;
+
+  currencies: WeeklySummaryCurrencyDetails[];
   movementsLink: string;
   preferencesLink: string;
+}
+
+function pluralize(count: number, singular: string, plural: string): string {
+  return count === 1 ? singular : plural;
+}
+
+const NO_ACTIVITY_BEST_DAY = {
+  label: 'Todavía sin entradas esta semana',
+  detail: 'Apenas recibas un ingreso o hagas una carga, lo vas a ver acá.',
+};
+
+export async function sendWeeklySummaryEmail(user: User, details: WeeklySummaryEmailDetails): Promise<void> {
+  if (!user.email) return;
+  if (!MAIL_SERVICE_ENABLED) {
+    console.log(`✉️  [servicio de mail deshabilitado] Se habría notificado a ${user.email}`);
+    return;
+  }
+
+  const variables: Record<string, string> = {
+    RANGO_FECHAS: details.rangeLabel,
+    MOVIMIENTOS_LINK: details.movementsLink,
+    PREFERENCIAS_LINK: details.preferencesLink,
+    USER_EMAIL: user.email,
+  };
+
+  for (const currency of details.currencies) {
+    const prefix = currency.code;
+    const bestDay = currency.bestDay ?? NO_ACTIVITY_BEST_DAY;
+
+    variables[`${prefix}_BALANCE`] = currency.totalBalance;
+
+    variables[`${prefix}_ENTRADAS_MONTO`] = currency.income.amountShort;
+    variables[`${prefix}_ENTRADAS_DETALLE`] =
+      `${currency.income.count} ${pluralize(currency.income.count, 'movimiento', 'movimientos')}`;
+
+    variables[`${prefix}_SALIDAS_MONTO`] = currency.expenses.amountShort;
+    variables[`${prefix}_SALIDAS_DETALLE`] =
+      `${currency.expenses.count} ${pluralize(currency.expenses.count, 'movimiento', 'movimientos')}`;
+
+    variables[`${prefix}_CAMBIOS_MONTO`] = currency.exchanges.amountShort;
+    variables[`${prefix}_CAMBIOS_DETALLE`] =
+      `${currency.exchanges.count} ${pluralize(currency.exchanges.count, 'operación', 'operaciones')}`;
+
+    variables[`${prefix}_MEJOR_DIA`] = bestDay.label;
+    variables[`${prefix}_MEJOR_DIA_DETALLE`] = bestDay.detail;
+
+    variables[`${prefix}_COMPARACION`] = currency.comparisonText;
+  }
+
+  await callMailService({
+    to: user.email,
+    type: 'weekly_summary',
+    variables,
+  });
 }
 
 async function callMailService(payload: { to: string; type: string; variables: Record<string, string> }): Promise<void> {
@@ -277,34 +336,3 @@ export async function sendAccountDeletionEmail(user: User, details: AccountDelet
 }
 
 
-export async function sendWeeklySummaryEmail(user: User, details: WeeklySummaryEmailDetails): Promise<void> {
-  if (!user.email) return;
-  if (!MAIL_SERVICE_ENABLED) {
-    console.log(`✉️  [servicio de mail deshabilitado] Se habría notificado a ${user.email}`);
-    return;
-  }
-
-  await callMailService({
-    to: user.email,
-    type: 'weekly_summary',
-    variables: {
-      RANGO_FECHAS: details.rangeLabel,
-      BALANCE_TOTAL: details.totalBalance,
-      ENTRADAS_MONTO: details.income.amountShort,
-      ENTRADAS_COUNT: String(details.income.count),
-      ENTRADAS_TOTAL: details.income.amountFull,
-      SALIDAS_MONTO: details.expenses.amountShort,
-      SALIDAS_COUNT: String(details.expenses.count),
-      SALIDAS_TOTAL: details.expenses.amountFull,
-      CAMBIOS_MONTO: details.exchanges.amountShort,
-      CAMBIOS_COUNT: String(details.exchanges.count),
-      CAMBIOS_TOTAL: details.exchanges.amountFull,
-      MEJOR_DIA: details.bestDay?.label ?? '—',
-      MEJOR_DIA_DETALLE: details.bestDay?.detail ?? 'Todavía no tuviste movimientos esta semana.',
-      MOVIMIENTOS_LINK: details.movementsLink,
-      TEXTO_COMPARACION: details.comparisonText,
-      USER_EMAIL: user.email,
-      PREFERENCIAS_LINK: details.preferencesLink,
-    },
-  });
-}
