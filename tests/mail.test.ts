@@ -155,18 +155,39 @@ describe('mail.ts', () => {
       const { sendWeeklySummaryEmail } = await import('../src/mails/mail.js');
       await sendWeeklySummaryEmail(makeUser(), {
         rangeLabel: '1 - 7 Sept',
-        totalBalance: 'USD 500.00',
-        income: { amountShort: '+100', amountFull: 'USD 100', count: 1 },
-        expenses: { amountShort: '-50', amountFull: 'USD 50', count: 2 },
-        exchanges: { amountShort: '0', amountFull: 'USD 0', count: 0 },
-        comparisonText: 'Gastaste menos',
+        currencies: [
+          {
+            code: 'ARS',
+            totalBalance: 'ARS 500,00',
+            income: { amountShort: '100,00', count: 1 },
+            expenses: { amountShort: '50,00', count: 2 },
+            exchanges: { amountShort: '0,00', count: 0 },
+            comparisonText: 'Gastaste menos que la semana pasada',
+          },
+          {
+            code: 'USD',
+            totalBalance: 'USD 0,00',
+            income: { amountShort: '0,00', count: 0 },
+            expenses: { amountShort: '0,00', count: 0 },
+            exchanges: { amountShort: '0,00', count: 0 },
+            comparisonText: 'Sin datos de la semana pasada',
+          },
+          {
+            code: 'BRL',
+            totalBalance: 'BRL 0,00',
+            income: { amountShort: '0,00', count: 0 },
+            expenses: { amountShort: '0,00', count: 0 },
+            exchanges: { amountShort: '0,00', count: 0 },
+            comparisonText: 'Sin datos de la semana pasada',
+          },
+        ],
         movementsLink: 'link',
-        preferencesLink: 'link'
+        preferencesLink: 'link',
       });
 
       const body = lastFetchBody();
       expect(body.type).toBe('weekly_summary');
-      expect(body.variables.ENTRADAS_COUNT).toBe('1');
+      expect(body.variables.ARS_ENTRADAS_DETALLE).toBe('1 movimiento');
     });
   });
 
