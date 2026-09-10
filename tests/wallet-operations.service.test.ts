@@ -217,6 +217,27 @@ describe('wallet-operations.service — exchangeCurrency (integración con mocks
         expect(sendTransactionEmail).not.toHaveBeenCalled();
     });
 
+    it('permite la conversión si la diferencia con el saldo es menor a 1 centavo (tolerancia de redondeo)', async () => {
+
+        const originBalance = makeBalance('140692814.12749246');
+        const destinationBalance = makeBalance('0');
+
+        vi.mocked(Balance.findOne).mockImplementation((options) => {
+            const where = whereOf(options);
+            return Promise.resolve(asBalance(where.currencyCode === 'ARS' ? originBalance : destinationBalance));
+        });
+
+        await exchangeCurrency(42, { fromCurrency: 'ARS', toCurrency: 'USD', amount: 140692814.13 });
+
+
+        expect(originBalance.update).toHaveBeenCalledWith(
+            expect.objectContaining({ amount: '0.00000000' }),
+            expect.anything()
+        );
+        expect(mockTransaction.commit).toHaveBeenCalledTimes(1);
+    });
+
+
     it('rechaza montos <= 0 sin llegar a abrir una transacción de DB', async () => {
         await expect(
             exchangeCurrency(42, { fromCurrency: 'ARS', toCurrency: 'USD', amount: 0 })

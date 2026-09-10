@@ -140,7 +140,7 @@ export async function transferFunds(senderId: number, input: TransferInput) {
             currencyDestination: currencyCode,
             transactionDate: createdTransaction.transactionDate,
             role: 'receiver',
-            counterpartyName: senderUser ? `${senderUser.name} ${senderUser.surname}`.trim() : 'Usuario NomaPay',
+            counterpartyName: senderUser ? `${senderUser.name} ${senderUser.surname}`.trim() : '',
             destinationAccount: `Saldo en ${currencyCode}`,
         }).catch((err) => console.error('❌ Error enviando email al receptor de la transferencia:', err));
 
