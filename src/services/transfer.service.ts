@@ -115,6 +115,7 @@ export async function transferFunds(senderId: number, input: TransferInput) {
         if (senderUser) {
             sendTransactionEmail(senderUser, {
                 type: 'transfer',
+                operationNumber: `NP-${createdTransaction.id}`,
                 amount: round2(amount),
                 fee: '0.00',
                 finalAmount: round2(amount),
@@ -122,12 +123,16 @@ export async function transferFunds(senderId: number, input: TransferInput) {
                 currencyDestination: currencyCode,
                 transactionDate: createdTransaction.transactionDate,
                 role: 'sender',
-                counterpartyName: `${receiverUser.name} ${receiverUser.surname}`,
+                counterpartyName: `${receiverUser.name} ${receiverUser.surname}`.trim(),
+                counterpartyAlias: receiverUser.alias ?? '—',
+                sourceAccount: `Saldo en ${currencyCode}`,
             }).catch((err) => console.error('❌ Error enviando email al emisor de la transferencia:', err));
         }
 
+
         sendTransactionEmail(receiverUser, {
             type: 'transfer',
+            operationNumber: `NP-${createdTransaction.id}`,
             amount: round2(amount),
             fee: '0.00',
             finalAmount: round2(amount),
@@ -135,8 +140,10 @@ export async function transferFunds(senderId: number, input: TransferInput) {
             currencyDestination: currencyCode,
             transactionDate: createdTransaction.transactionDate,
             role: 'receiver',
-            counterpartyName: senderUser ? `${senderUser.name} ${senderUser.surname}` : '',
+            counterpartyName: senderUser ? `${senderUser.name} ${senderUser.surname}`.trim() : 'Usuario NomaPay',
+            destinationAccount: `Saldo en ${currencyCode}`,
         }).catch((err) => console.error('❌ Error enviando email al receptor de la transferencia:', err));
+
 
         return {
             message: 'Transferencia exitosa',
