@@ -1,6 +1,12 @@
  ### NomaPay — Backend
 
-Backend de **NomaPay**, una billetera digital multi-moneda simulada (sin dinero real). Expone la API REST que consume el frontend en React: autenticación, perfil de usuario y wallet.
+Backend de **NomaPay**, una billetera digital multimoneda (simulada) pensada para viajeros y nómades digitales: manejar varias monedas, transferir dinero, convertir entre monedas propias y llevar un seguimiento claro de los movimientos, todo desde una sola app.
+ Expone la API REST que consume el frontend en React: autenticación, perfil de usuario y wallet.
+
+ Este repositorio contiene exclusivamente la aplicación Backend, construida con Node.js, TypeScript, Express y PostgreSQL, se encuentra integrada con el Frontend de NomaPay.  
+ ([NomaPay-frontend](https://github.com/nomapayapp-collab/NomaPay_Frontend)).
+
+
 
 > 🔗 **Documentación interactiva de la API (Swagger):** `/api-docs` 
 
@@ -85,6 +91,7 @@ La separación en capas (`controller → service → model`) busca que cada arch
 ## Modelo de datos
 
 users (1) ──── (1) wallets (1) ──── (N) balances ──── (1) currencies
+
 │
 └──── (N) transactions
 users (1) ──── (N) refresh_tokens
@@ -287,3 +294,15 @@ Estado real verificado contra el código (no contra lo planeado originalmente), 
 [ ] Lógica y endpoints de suscripciones (la tabla subscriptions ya existe en el modelo de datos, pero todavía no hay ningún controller, route ni service construido encima,se realizará en una nueva versión)
 
 El modelo de datos y la infraestructura de auth ya estaban preparados desde el diseño inicial para soportar todo esto sin cambios estructurales grandes — y así fue: ninguna de estas features requirió tocar el esquema de `transactions`, `balances` ni `wallets`
+
+## Equipo:
+
+###  **Frontend**
+
+- Candelaria Ferrari
+- Agustin Spataro
+
+### **Backend**
+
+- Gastón Stratta
+- Gisella Massiero
