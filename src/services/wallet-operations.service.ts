@@ -113,10 +113,16 @@ export async function convertCurrency(
         if (!originBalance) {
             throw new NotFoundError(`No existe balance en ${fromCurrency} para esta wallet.`);
         }
+        const currentBalance = Number(originBalance.amount);
 
-        if (Number(originBalance.amount) < totalDebit) {
+        let effectiveDebit = totalDebit;
+        if (effectiveDebit > currentBalance && (effectiveDebit - currentBalance) < 0.01) {
+            effectiveDebit = currentBalance;
+        }
+
+        if (currentBalance < effectiveDebit) {
             throw new ValidationError(
-                `Saldo insuficiente en ${fromCurrency}. Se necesitan ${round2(totalDebit)} (monto + comisión) ` +
+                `Saldo insuficiente en ${fromCurrency}. Se necesitan ${round2(effectiveDebit)} (monto + comisión) ` +
                 `y el saldo disponible es ${originBalance.amount}.`
             );
         }
@@ -135,7 +141,7 @@ export async function convertCurrency(
 
         await originBalance.update(
             {
-                amount: (Number(originBalance.amount) - totalDebit).toFixed(8),
+                amount: Math.max(0, currentBalance - effectiveDebit).toFixed(8),
                 updatedAt: new Date(),
             },
             { transaction: t }
